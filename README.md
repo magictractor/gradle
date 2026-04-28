@@ -1,2 +1,2 @@
 # gradle
-Gradle plugin for use with magictractor repositories
+Gradle plugin for use with magictractor repositories.
