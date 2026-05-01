@@ -1,5 +1,6 @@
 plugins {
-    id 'java-library'
+    // https://docs.gradle.org/current/userguide/java_gradle_plugin.html
+    id 'java-gradle-plugin'
     
     // https://docs.gradle.org/current/userguide/publishing_maven.html
     id 'maven-publish'
@@ -66,6 +67,16 @@ java {
     //withJavadocJar()
 }
 
+// This creates a new minimal project in the Maven repository that has a dependency on this project.
+gradlePlugin {
+    plugins {
+        register('magictractor-project-plugin') {
+            id = 'uk.co.magictractor.magictractor-project-plugin'
+            implementationClass = 'uk.co.magictractor.gradle.MagicTractorProjectPlugin'
+        }
+    }
+}
+
 tasks.withType(JavaCompile) {
     // Include details about deprecated code in build/reports/problems/problems-report.html
     options.compilerArgs += ['-Xlint:deprecation']
@@ -79,13 +90,7 @@ clean {
     delete "$rootDir/jars"
 }
 
-// "libs.xxx" refers to libraries configured in version catalog in settings.gradle.
-dependencies {
-    // Logger API.
-    implementation libs.slf4j.api
-    // Logger implementation for unit tests.
-    runtimeOnly libs.logback.classic
-    
+dependencies {   
     testImplementation libs.junit.jupiter;
     testRuntimeOnly libs.junit.jupiter.platform;
     testImplementation libs.assertj;
