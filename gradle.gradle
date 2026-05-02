@@ -1,15 +1,15 @@
 plugins {
     // https://docs.gradle.org/current/userguide/java_gradle_plugin.html
-    id 'java-gradle-plugin'
+    id "java-gradle-plugin"
     
     // https://docs.gradle.org/current/userguide/publishing_maven.html
-    id 'maven-publish'
+    id "maven-publish"
 
-    id 'eclipse'
+    id "eclipse"
 }
 
-group = 'uk.co.magictractor'
-version = '0.0.1-SNAPSHOT'
+group = "uk.co.magictractor"
+version = "0.0.1-SNAPSHOT"
 
 publishing {
     publications {
@@ -18,26 +18,26 @@ publishing {
         
             pom {
                 name = "${project.name.capitalize()}"
-                description = 'Create PDFs and other documents using a builder that abstracts use of Apache FOP.'
+                description = "Create PDFs and other documents using a builder that abstracts use of Apache FOP."
                 url = "https://github.com/magictractor/${project.name}"
-                inceptionYear = '2026'
+                inceptionYear = "2026"
 
                 licenses {
                     license {
-                        name = 'Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0'
+                        name = "Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0"
                     }
                 }
                 developers {
                     developer {
-                        id = 'kend'
-                        name = 'Ken Dobson'
-                       // email = 'me@gmail.com'
+                        id = "kend"
+                        name = "Ken Dobson"
+                       // email = "me@gmail.com"
                     }
                 }
                 scm {
-                    // connection = 'scm:git:git:github.com/magictractor/${project.name}.git'
-                    // developerConnection = 'scm:git:ssh://github.com/magictractor/${project.name}.git'
+                    // connection = "scm:git:git:github.com/magictractor/${project.name}.git"
+                    // developerConnection = "scm:git:ssh://github.com/magictractor/${project.name}.git"
                     url = "https://github.com/magictractor/${project.name}"
                 }
             }
@@ -46,7 +46,7 @@ publishing {
 
     repositories {
         //maven {
-        //    name = 'myRepo'
+        //    name = "myRepo"
         //    url = layout.buildDirectory.dir("repo")
         //}
     }
@@ -58,7 +58,7 @@ repositories {
     
     // Gradle jars are not in Maven Central.
     // See https://stackoverflow.com/questions/79248344/could-not-find-org-gradlegradle-tooling-api7-6
-    // maven { url = 'https://repo.gradle.org/gradle/libs-releases' }
+    // maven { url = "https://repo.gradle.org/gradle/libs-releases" }
 }
 
 test {
@@ -76,16 +76,16 @@ java {
 // This creates a new minimal project in the Maven repository that has a dependency on this project.
 gradlePlugin {
     plugins {
-        register('magictractor-project-plugin') {
-            id = 'uk.co.magictractor.magictractor-project-plugin'
-            implementationClass = 'uk.co.magictractor.gradle.MagicTractorProjectPlugin'
+        register("magictractor-project-plugin") {
+            id = "uk.co.magictractor.magictractor-project-plugin"
+            implementationClass = "uk.co.magictractor.gradle.MagicTractorProjectPlugin"
         }
     }
 }
 
 tasks.withType(JavaCompile) {
     // Include details about deprecated code in build/reports/problems/problems-report.html
-    options.compilerArgs += ['-Xlint:deprecation']
+    options.compilerArgs += ["-Xlint:deprecation"]
 }
 
 tasks.withType(Jar) {
@@ -108,7 +108,7 @@ dependencies {
 
 // Use ALL to get source for Gradle classes.
 // https://docs.gradle.org/current/userguide/gradle_wrapper.html#customizing_wrapper
-tasks.named('wrapper') {
+tasks.named("wrapper") {
     distributionType = Wrapper.DistributionType.ALL
 }
 
@@ -118,16 +118,16 @@ tasks.named('wrapper') {
 //
 eclipse.classpath.file {
     whenMerged {
-        def sourcePath = fileReference('C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual')
+        def sourcePath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual")
         entries.each {
             source ->
-            if (source.kind == 'lib' && source.path.contains('/generated-gradle-jars/')) {
-                logger.lifecycle('hubba ' + source.kind + '  ' + source)
+            if (source.kind == "lib" && source.path.contains("/generated-gradle-jars/")) {
+                logger.lifecycle("hubba " + source.kind + "  " + source)
                 source.sourcePath = sourcePath;
-                logger.lifecycle('bubba ' + source.kind + '  ' + source)
+                logger.lifecycle("bubba " + source.kind + "  " + source)
             }
-//           // if (source.kind == 'src' && (source.path.endsWith('-gen') || source.path.contains('/gen/')) ) {
-//           //     source.entryAttributes['ignore_optional_problems'] = 'true'
+//           // if (source.kind == "src" && (source.path.endsWith("-gen") || source.path.contains("/gen/")) ) {
+//           //     source.entryAttributes["ignore_optional_problems"] = "true"
 //           //}
         }
     }
