@@ -4,6 +4,8 @@ plugins {
     
     // https://docs.gradle.org/current/userguide/publishing_maven.html
     id 'maven-publish'
+
+    id 'eclipse'
 }
 
 group = 'uk.co.magictractor'
@@ -53,6 +55,10 @@ publishing {
 // https://docs.gradle.org/current/userguide/declaring_repositories.html
 repositories {
     mavenCentral()
+    
+    // Gradle jars are not in Maven Central.
+    // See https://stackoverflow.com/questions/79248344/could-not-find-org-gradlegradle-tooling-api7-6
+    // maven { url = 'https://repo.gradle.org/gradle/libs-releases' }
 }
 
 test {
@@ -90,8 +96,57 @@ clean {
     delete "$rootDir/jars"
 }
 
-dependencies {   
+dependencies {
     testImplementation libs.junit.jupiter;
     testRuntimeOnly libs.junit.jupiter.platform;
     testImplementation libs.assertj;
 }
+
+// https://docs.gradle.org/current/dsl/org.gradle.plugins.ide.eclipse.model.EclipseProject.html
+// https://github.com/redhat-developer/vscode-java/issues/3311
+// https://discuss.gradle.org/t/ad-hoc-jar-file-downloads-via-gradle/5989/5
+
+// Use ALL to get source for Gradle classes.
+// https://docs.gradle.org/current/userguide/gradle_wrapper.html#customizing_wrapper
+tasks.named('wrapper') {
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+// Proof of concept: source folders aggregated manually
+// C:\Users\Ken\.gradle\wrapper\dists\gradle-9.5.0-all\__manual
+//
+//
+eclipse.classpath.file {
+    whenMerged {
+        def sourcePath = fileReference('C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual')
+        entries.each {
+            source ->
+            if (source.kind == 'lib' && source.path.contains('/generated-gradle-jars/')) {
+                logger.lifecycle('hubba ' + source.kind + '  ' + source)
+                source.sourcePath = sourcePath;
+                logger.lifecycle('bubba ' + source.kind + '  ' + source)
+            }
+//           // if (source.kind == 'src' && (source.path.endsWith('-gen') || source.path.contains('/gen/')) ) {
+//           //     source.entryAttributes['ignore_optional_problems'] = 'true'
+//           //}
+        }
+    }
+}
+
+// .java files in
+// C:\Users\Ken\Downloads\gradle-8.14-all.zip\gradle-8.14\src\tooling-api\org\gradle\tooling
+//
+// Cached at C:\Users\Ken\.gradle\caches\modules-2\files-2.1\org.gradle\gradle-tooling-api\8.13\3b101bc5ebac0294431a69f88fe8ecf16d7ccf18
+//
+// C:\Users\Ken\.gradle\wrapper\dists\gradle-8.14-all\c2qonpi39x1mddn7hk5gh9iqj\gradle-8.14\src\tooling-api
+// but why no gradle-8.13-all directory? It appeared after running "./gradlew wrapper" again (after changing dist type).
+// C:\Users\Ken\.gradle\wrapper\dists\gradle-8.13-all\54h0s9kvb6g2sinako7ub77ku\gradle-8.13\src\tooling-api
+// hash is not the hash of the jar file
+
+// removing items
+// https://groups.google.com/g/groovy-user/c/_r5RkBP55NE?pli=1
+
+// C:\Users\Ken\.gradle\wrapper\dists\gradle-9.5.0-all\aca6g93cdtcf0oapcfka748qh\gradle-9.5.0\src\tooling-api
+// https://services.gradle.org/distributions/ has sha256 files, but they do not match
+
+// https://docs.gradle.org/current/userguide/working_with_files.html
