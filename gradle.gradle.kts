@@ -59,10 +59,6 @@ publishing {
 // https://docs.gradle.org/current/userguide/declaring_repositories.html
 repositories {
     mavenCentral()
-    
-    // Gradle jars are not in Maven Central.
-    // See https://stackoverflow.com/questions/79248344/could-not-find-org-gradlegradle-tooling-api7-6
-    // maven { url = "https://repo.gradle.org/gradle/libs-releases" }
 }
 
 tasks.withType<Test>().configureEach {
@@ -76,7 +72,7 @@ tasks.withType<Test>().configureEach {
 java {
 //tasks.withType<JavaPlugin>().configureEach {
     // task: extension 'java'  class org.gradle.api.plugins.internal.DefaultJavaPluginExtension_Decorated
-    logger.lifecycle("task: " + this + "  " + this.javaClass)
+    //logger.lifecycle("task: " + this + "  " + this.javaClass)
 
     toolchain {
         languageVersion = JavaLanguageVersion.of(8)
@@ -86,24 +82,13 @@ java {
     //withJavadocJar()
 }
 
+// :compileJava
 tasks.withType<JavaCompile>().configureEach {
-    // task: task ':compileJava'  class org.gradle.api.tasks.compile.JavaCompile_Decorated
-    logger.lifecycle("task: " + this + "  " + this.javaClass)
-
     // Include details about deprecated code in build/reports/problems/problems-report.html
     // options.compilerArgs.add("-Xlint:unchecked")
     options.setDeprecation(true)
 }
 
-// This creates a new minimal project in the Maven repository that has a dependency on this project.
-gradlePlugin {
-    plugins {
-        register("magictractor-project-plugin") {
-            id = "uk.co.magictractor.magictractor-project-plugin"
-            implementationClass = "uk.co.magictractor.gradle.MagicTractorProjectPlugin"
-        }
-    }
-}
 
 // :jar
 tasks.withType<Jar>().configureEach {
@@ -130,6 +115,17 @@ dependencies {
     testImplementation(libs.junit.jupiter);
     testRuntimeOnly(libs.junit.jupiter.platform);
     testImplementation(libs.assertj);
+}
+
+
+// This creates a new minimal project in the Maven repository that has a dependency on this project.
+gradlePlugin {
+    plugins {
+        register("magictractor-project-plugin") {
+            id = "uk.co.magictractor.magictractor-project-plugin"
+            implementationClass = "uk.co.magictractor.gradle.MagicTractorProjectPlugin"
+        }
+    }
 }
 
 // https://docs.gradle.org/current/dsl/org.gradle.plugins.ide.eclipse.model.EclipseProject.html
