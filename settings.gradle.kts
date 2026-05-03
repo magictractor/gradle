@@ -1,17 +1,47 @@
-// An explicit rootProject.name is best practice.
-// See https://docs.gradle.org/current/userguide/best_practices_general.html#name_your_root_project.
-rootProject.name = "magictractor-gradle"
+// settings.gradle.kts is intended to be the same for all magictractor projects.
+// There may be changes to settings.gradle.kts that should be rolled out to all magictractor projects.
+// TODO! magictractor-plugin should detect non-standard settings.gradle.kts
+//
+// Project specific settings should be added to settings.project.gradle.kts or settings.project-localonly.gradle.kts.
+// settings.project.gradle.kts should always exist and set rootProject.name.
+// settings.project-localonly.gradle.kts is optional and typically contains includeBuild('../<siblingProject>')
+// entries when working on related projects.
 
-rootProject.buildFileName = "${rootProject.name}.gradle.kts".replace("magictractor-", "")
+
+pluginManagement {
+    // Make magictractor custom plugins available.
+    // https://docs.gradle.org/current/userguide/plugins_intermediate.html#sec:types_of_plugins
+
+    // Can use "includeBuild '../gradle'" as well as or instead of this.
+    repositories {
+        mavenLocal();
+    }
+}
+
+
+// settings.project.gradle.kts is expected to exist
+// and it must set rootProject.name
+rootProject.name = "__undefined"
+apply { from(file("settings.project.gradle.kts")) }
+if (rootProject.name == "__undefined") {
+    // An explicit rootProject.name is best practice.
+    // See https://docs.gradle.org/current/userguide/best_practices_general.html#name_your_root_project.
+    throw GradleException("rootProject.name should be set in settings.project.gradle.kts")
+}
+
 
 // includeBuild "../{project}" entries may be added to
 // settings.local.gradle to link to source in sibling projects
 // instead of a jar file.
-val localSettings = file("settings.local.gradle")
+val localSettings = file("settings.project-local.gradle.kts")
 if (localSettings.exists()) {
-    // apply from: localSettings
     apply { from(localSettings) }
 }
+
+
+// Use non-standard build file name because usual build.gradle.kts is cumbersome when working with multiple projects.
+rootProject.buildFileName = "${rootProject.name}.gradle.kts".replace("magictractor-", "")
+
 
 // settings.gradle may be copied without modification across magictractor.co.uk projects,
 // so the version catalog may include libraries that are not used in this project.
