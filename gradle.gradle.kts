@@ -1,23 +1,27 @@
+import org.gradle.plugins.ide.eclipse.model.Classpath
+import org.gradle.plugins.ide.eclipse.model.Library
+
 plugins {
     // https://docs.gradle.org/current/userguide/java_gradle_plugin.html
-    id "java-gradle-plugin"
+    id("java-gradle-plugin")
     
     // https://docs.gradle.org/current/userguide/publishing_maven.html
-    id "maven-publish"
+    id("maven-publish")
 
-    id "eclipse"
+    id("eclipse")
 }
 
 group = "uk.co.magictractor"
 version = "0.0.1-SNAPSHOT"
 
+// https://docs.gradle.org/current/userguide/publishing_maven.html
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            from components.java
+        create<MavenPublication>("maven") {
+            from(components["java"])
         
             pom {
-                name = "${project.name.capitalize()}"
+                name = "${project.name.replaceFirstChar(Char::titlecase)}"
                 description = "Create PDFs and other documents using a builder that abstracts use of Apache FOP."
                 url = "https://github.com/magictractor/${project.name}"
                 inceptionYear = "2026"
@@ -61,16 +65,34 @@ repositories {
     // maven { url = "https://repo.gradle.org/gradle/libs-releases" }
 }
 
-test {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
+// https://docs.gradle.org/current/userguide/building_java_projects.html
+// https://docs.gradle.org/current/userguide/java_plugin.html
+// TODO! revisit withType() here - JavaCompile is not correct?
+// tasks.withType<JavaCompile>().configureEach {
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+//tasks.withType<JavaPlugin>().configureEach {
+    // task: extension 'java'  class org.gradle.api.plugins.internal.DefaultJavaPluginExtension_Decorated
+    logger.lifecycle("task: " + this + "  " + this.javaClass)
+
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
     
     withSourcesJar()
     //withJavadocJar()
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    // task: task ':compileJava'  class org.gradle.api.tasks.compile.JavaCompile_Decorated
+    logger.lifecycle("task: " + this + "  " + this.javaClass)
+
+    // Include details about deprecated code in build/reports/problems/problems-report.html
+    // options.compilerArgs.add("-Xlint:unchecked")
+    options.setDeprecation(true)
 }
 
 // This creates a new minimal project in the Maven repository that has a dependency on this project.
@@ -83,23 +105,31 @@ gradlePlugin {
     }
 }
 
-tasks.withType(JavaCompile) {
-    // Include details about deprecated code in build/reports/problems/problems-report.html
-    options.compilerArgs += ["-Xlint:deprecation"]
-}
-
-tasks.withType(Jar) {
+// :jar
+tasks.withType<Jar>().configureEach {
     destinationDirectory.set(file("$rootDir/jars"))
 }
 
-clean {
-    delete "$rootDir/jars"
+// :clean
+tasks.withType<Delete>().configureEach {
+    // Before doFirst for caching.
+    // https://docs.gradle.org/9.5.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
+    val jarDir = File("$rootDir/jars")
+     
+    doFirst {
+        val deleted = jarDir.deleteRecursively()
+        if (deleted) {
+            logger.lifecycle("jars deleted")
+        } else {
+            logger.warn("Failed to delete " + jarDir)
+        }
+    }
 }
 
 dependencies {
-    testImplementation libs.junit.jupiter;
-    testRuntimeOnly libs.junit.jupiter.platform;
-    testImplementation libs.assertj;
+    testImplementation(libs.junit.jupiter);
+    testRuntimeOnly(libs.junit.jupiter.platform);
+    testImplementation(libs.assertj);
 }
 
 // https://docs.gradle.org/current/dsl/org.gradle.plugins.ide.eclipse.model.EclipseProject.html
@@ -108,7 +138,7 @@ dependencies {
 
 // Use ALL to get source for Gradle classes.
 // https://docs.gradle.org/current/userguide/gradle_wrapper.html#customizing_wrapper
-tasks.named("wrapper") {
+tasks.withType<Wrapper>().configureEach {
     distributionType = Wrapper.DistributionType.ALL
 }
 
@@ -116,21 +146,23 @@ tasks.named("wrapper") {
 // C:\Users\Ken\.gradle\wrapper\dists\gradle-9.5.0-all\__manual
 //
 //
+// https://docs.gradle.org/current/kotlin-dsl/gradle/org.gradle.plugins.ide.eclipse.model/-eclipse-classpath/index.html
 eclipse.classpath.file {
-    whenMerged {
-        def sourcePath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual")
-        entries.each {
-            source ->
-            if (source.kind == "lib" && source.path.contains("/generated-gradle-jars/")) {
-                logger.lifecycle("hubba " + source.kind + "  " + source)
-                source.sourcePath = sourcePath;
-                logger.lifecycle("bubba " + source.kind + "  " + source)
+    whenMerged(Action<Classpath> {
+        val sourcePath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual")
+        val javadocPath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/aca6g93cdtcf0oapcfka748qh/gradle-9.5.0/docs/javadoc")
+        entries.filterIsInstance<Library>().forEach {
+            lib ->
+            if (lib.path.contains("/generated-gradle-jars/")) {
+                if (lib.sourcePath != null) {
+                    logger.warn("Expected source path for Gradle lib to be null before setting it")
+                }
+                lib.sourcePath = sourcePath;
+                // lib.javadocPath = javadocPath;
+                logger.debug("Source path for Gradle lib " + lib.path + " set to " + sourcePath.file)
             }
-//           // if (source.kind == "src" && (source.path.endsWith("-gen") || source.path.contains("/gen/")) ) {
-//           //     source.entryAttributes["ignore_optional_problems"] = "true"
-//           //}
         }
-    }
+    })
 }
 
 // .java files in
