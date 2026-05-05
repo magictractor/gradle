@@ -138,14 +138,34 @@ tasks.withType<Wrapper>().configureEach {
     distributionType = Wrapper.DistributionType.ALL
 }
 
-// Proof of concept: source folders aggregated manually
-// C:\Users\Ken\.gradle\wrapper\dists\gradle-9.5.0-all\__manual
-//
-//
+tasks.register<Copy>("prepareGradleSource") {
+    val home=file("${project.gradle.gradleHomeDir}")
+
+    // Copy of the source files with a slightly different structure (no module directories).
+    val javaSrc = File(home, "__src")
+    if (javaSrc.exists()) {
+        logger.lifecycle("Gradle source already exists in " + javaSrc)
+        // TODO! cannot return
+        //return
+    }
+        
+    // Should be present if Gradle distribution type is ALL
+    val allSrc = File(home, "src")
+    if (!allSrc.exists()) {
+        logger.warn("Gradle source not found in " + home)
+        //return
+    }
+    
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(allSrc.listFiles())
+    into(javaSrc)
+}
+
 // https://docs.gradle.org/current/kotlin-dsl/gradle/org.gradle.plugins.ide.eclipse.model/-eclipse-classpath/index.html
 eclipse.classpath.file {
     whenMerged(Action<Classpath> {
-        val sourcePath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual")
+        //val sourcePath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual")
+        val sourcePath = fileReference(File(file("${project.gradle.gradleHomeDir}"), "__src"))
         val javadocPath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/aca6g93cdtcf0oapcfka748qh/gradle-9.5.0/docs/javadoc")
         entries.filterIsInstance<Library>().forEach {
             lib ->
@@ -160,21 +180,3 @@ eclipse.classpath.file {
         }
     })
 }
-
-// .java files in
-// C:\Users\Ken\Downloads\gradle-8.14-all.zip\gradle-8.14\src\tooling-api\org\gradle\tooling
-//
-// Cached at C:\Users\Ken\.gradle\caches\modules-2\files-2.1\org.gradle\gradle-tooling-api\8.13\3b101bc5ebac0294431a69f88fe8ecf16d7ccf18
-//
-// C:\Users\Ken\.gradle\wrapper\dists\gradle-8.14-all\c2qonpi39x1mddn7hk5gh9iqj\gradle-8.14\src\tooling-api
-// but why no gradle-8.13-all directory? It appeared after running "./gradlew wrapper" again (after changing dist type).
-// C:\Users\Ken\.gradle\wrapper\dists\gradle-8.13-all\54h0s9kvb6g2sinako7ub77ku\gradle-8.13\src\tooling-api
-// hash is not the hash of the jar file
-
-// removing items
-// https://groups.google.com/g/groovy-user/c/_r5RkBP55NE?pli=1
-
-// C:\Users\Ken\.gradle\wrapper\dists\gradle-9.5.0-all\aca6g93cdtcf0oapcfka748qh\gradle-9.5.0\src\tooling-api
-// https://services.gradle.org/distributions/ has sha256 files, but they do not match
-
-// https://docs.gradle.org/current/userguide/working_with_files.html
