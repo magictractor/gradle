@@ -138,13 +138,15 @@ tasks.withType<Wrapper>().configureEach {
     distributionType = Wrapper.DistributionType.ALL
 }
 
-tasks.register<Copy>("prepareGradleSource") {
+// https://docs.gradle.org/current/dsl/org.gradle.api.tasks.bundling.Jar.html
+tasks.register<Jar>("prepareGradleSource") {
     val home=file("${project.gradle.gradleHomeDir}")
 
     // Copy of the source files with a slightly different structure (no module directories).
-    val javaSrc = File(home, "__src")
-    if (javaSrc.exists()) {
-        logger.lifecycle("Gradle source already exists in " + javaSrc)
+    destinationDirectory = home
+    archiveFileName = "__src.jar"
+    if (archiveFile.get().getAsFile().exists()) {
+        logger.lifecycle("Gradle source already exists in " + archiveFile)
         // TODO! cannot return
         //return
     }
@@ -156,17 +158,15 @@ tasks.register<Copy>("prepareGradleSource") {
         //return
     }
     
+    logger.lifecycle("Copying Gradle source to " + archiveFile)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(allSrc.listFiles())
-    into(javaSrc)
 }
 
 // https://docs.gradle.org/current/kotlin-dsl/gradle/org.gradle.plugins.ide.eclipse.model/-eclipse-classpath/index.html
 eclipse.classpath.file {
     whenMerged(Action<Classpath> {
-        //val sourcePath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/__manual")
-        val sourcePath = fileReference(File(file("${project.gradle.gradleHomeDir}"), "__src"))
-        val javadocPath = fileReference("C:/Users/Ken/.gradle/wrapper/dists/gradle-9.5.0-all/aca6g93cdtcf0oapcfka748qh/gradle-9.5.0/docs/javadoc")
+        val sourcePath = fileReference(File(file("${project.gradle.gradleHomeDir}"), "__src.jar"))
         entries.filterIsInstance<Library>().forEach {
             lib ->
             if (lib.path.contains("/generated-gradle-jars/")) {
@@ -174,7 +174,6 @@ eclipse.classpath.file {
                     logger.warn("Expected source path for Gradle lib to be null before setting it")
                 }
                 lib.sourcePath = sourcePath;
-                // lib.javadocPath = javadocPath;
                 logger.debug("Source path for Gradle lib " + lib.path + " set to " + sourcePath.file)
             }
         }
