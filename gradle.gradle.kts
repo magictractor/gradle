@@ -1,5 +1,8 @@
 import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
+import org.gradle.plugins.ide.eclipse.GenerateEclipseClasspath
+import org.gradle.plugins.ide.eclipse.GenerateEclipseProject
+//import org.gradle.plugins.ide.eclipse.model.*
 
 plugins {
     // https://docs.gradle.org/current/userguide/java_gradle_plugin.html
@@ -138,29 +141,39 @@ tasks.withType<Wrapper>().configureEach {
     distributionType = Wrapper.DistributionType.ALL
 }
 
+// Copy of the source files with a slightly different structure (no module directories).
+//
 // https://docs.gradle.org/current/dsl/org.gradle.api.tasks.bundling.Jar.html
-tasks.register<Jar>("prepareGradleSource") {
-    val home=file("${project.gradle.gradleHomeDir}")
+tasks.register<Jar>("packageGradleSource") {
+    group = "IDE"
+    description = "Packages Gradle source in a jar file for inclusion in IDE"
 
-    // Copy of the source files with a slightly different structure (no module directories).
-    destinationDirectory = home
+    val gradleHome = file("${project.gradle.gradleHomeDir}")
+    val gradleSrcDir = File(gradleHome, "src")
+    
+    // Configure Jar task
+    destinationDirectory = gradleHome
     archiveFileName = "__src.jar"
-    if (archiveFile.get().getAsFile().exists()) {
-        logger.lifecycle("Gradle source already exists in " + archiveFile)
-        // TODO! cannot return
-        //return
-    }
-        
+    from(gradleSrcDir.listFiles())
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    // TODO! log message if this looks like a BIN distribution
+    onlyIf("Gradle source already exists") { !archiveFile.get().getAsFile().exists() }
+    
+   
     // Should be present if Gradle distribution type is ALL
-    val allSrc = File(home, "src")
-    if (!allSrc.exists()) {
-        logger.warn("Gradle source not found in " + home)
-        //return
+    onlyIf("No Gradle source") { gradleSrcDir.exists() }
+    if (!gradleSrcDir.exists()) {
+        logger.warn("Gradle source directory not found in " + gradleSrcDir)
     }
     
-    logger.lifecycle("Copying Gradle source to " + archiveFile)
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from(allSrc.listFiles())
+    doFirst {
+        // It'll take about a minute, so write a message before starting.
+        logger.lifecycle("Packaging Gradle source...")
+    }
+    doLast {
+        logger.lifecycle("Gradle source copied to " + archiveFile.get())
+    }
 }
 
 // https://docs.gradle.org/current/kotlin-dsl/gradle/org.gradle.plugins.ide.eclipse.model/-eclipse-classpath/index.html
@@ -178,4 +191,10 @@ eclipse.classpath.file {
             }
         }
     })
+}
+
+eclipse {
+    // dependencyTasks might be more appropriate, but I can't find documentation
+    // TODO! add a debug task for both auto build and dependency
+    autoBuildTasks( "packageGradleSource" )
 }
