@@ -1,8 +1,5 @@
 import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
-import org.gradle.plugins.ide.eclipse.GenerateEclipseClasspath
-import org.gradle.plugins.ide.eclipse.GenerateEclipseProject
-//import org.gradle.plugins.ide.eclipse.model.*
 
 plugins {
     // https://docs.gradle.org/current/userguide/java_gradle_plugin.html
@@ -136,6 +133,7 @@ gradlePlugin {
 // https://discuss.gradle.org/t/ad-hoc-jar-file-downloads-via-gradle/5989/5
 
 // Use ALL to get source for Gradle classes.
+//
 // https://docs.gradle.org/current/userguide/gradle_wrapper.html#customizing_wrapper
 tasks.withType<Wrapper>().configureEach {
     distributionType = Wrapper.DistributionType.ALL
@@ -177,25 +175,27 @@ tasks.register<Jar>("packageGradleSource") {
 }
 
 // https://docs.gradle.org/current/kotlin-dsl/gradle/org.gradle.plugins.ide.eclipse.model/-eclipse-classpath/index.html
-eclipse.classpath.file {
-    whenMerged(Action<Classpath> {
-        val sourcePath = fileReference(File(file("${project.gradle.gradleHomeDir}"), "__src.jar"))
-        entries.filterIsInstance<Library>().forEach {
-            lib ->
-            if (lib.path.contains("/generated-gradle-jars/")) {
-                if (lib.sourcePath != null) {
-                    logger.warn("Expected source path for Gradle lib to be null before setting it")
-                }
-                lib.sourcePath = sourcePath;
-                logger.debug("Source path for Gradle lib " + lib.path + " set to " + sourcePath.file)
-            }
-        }
-    })
-}
-
 eclipse {
-    // Builds run autoBuildTasks, synchronizationTasks then autoBuildTasks again.
-    // I have opted to use synchronizationTasks for source packing because it is only
-    // triggered once. 
+    // Buildship runs autoBuildTasks, synchronizationTasks then autoBuildTasks again.
+    // I have opted to use synchronizationTasks for source packaging because it is only triggered once. 
     synchronizationTasks("packageGradleSource")
+
+    // TODO! too soon to be resolving this value - use doFirst or a global variable
+    //val sourcePath = tasks.named<Jar>("packageGradleSource").get().archiveFile.get().asFile
+    val sourcePath = File(File("${gradle.gradleHomeDir}"), "__src.jar")
+    
+    classpath.file {
+        whenMerged(Action<Classpath> {
+            entries.filterIsInstance<Library>().forEach { lib ->
+                if (lib.path.contains("/generated-gradle-jars/")) {
+                    if (lib.sourcePath != null) {
+                        logger.warn("Expected source path for Gradle lib to be null before setting it, is " + lib.sourcePath)
+                    }
+                    lib.sourcePath = fileReference(sourcePath);
+                    logger.debug("Source path for Gradle lib " + lib.path + " set to " + sourcePath)
+                }
+            }
+        })
+    }
+
 }
