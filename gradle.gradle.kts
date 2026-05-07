@@ -194,7 +194,8 @@ eclipse.classpath.file {
 }
 
 eclipse {
-    // dependencyTasks might be more appropriate, but I can't find documentation
-    // TODO! add a debug task for both auto build and dependency
-    autoBuildTasks( "packageGradleSource" )
+    // Builds run autoBuildTasks, synchronizationTasks then autoBuildTasks again.
+    // I have opted to use synchronizationTasks for source packing because it is only
+    // triggered once. 
+    synchronizationTasks("packageGradleSource")
 }
