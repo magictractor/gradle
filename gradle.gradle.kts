@@ -75,7 +75,10 @@ java {
     //logger.lifecycle("task: " + this + "  " + this.javaClass)
 
     toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
+        // Gradle 9.0.0 code needs Java 17.
+        // https://docs.gradle.org/9.0.0/release-notes.html#jvm-17
+        // Projects using this may use toolchains with earlier versions.
+        languageVersion = JavaLanguageVersion.of(17)
     }
     
     withSourcesJar()
@@ -121,9 +124,9 @@ dependencies {
 // This creates a new minimal project in the Maven repository that has a dependency on this project.
 gradlePlugin {
     plugins {
-        register("magictractor-project-plugin") {
-            id = "uk.co.magictractor.magictractor-project-plugin"
-            implementationClass = "uk.co.magictractor.gradle.MagicTractorProjectPlugin"
+        register("magictractor-plugin") {
+            id = "uk.co.magictractor.magictractor-plugin"
+            implementationClass = "uk.co.magictractor.gradle.MagicTractorPlugin"
         }
     }
 }
