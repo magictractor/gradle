@@ -17,12 +17,8 @@ version = "0.0.1-SNAPSHOT"
 // https://docs.gradle.org/current/userguide/publishing_maven.html
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-        
+        withType<MavenPublication>().configureEach {
             pom {
-                // Revisit this - this causes the pom to be corrupt, missing the opening name tag and the start of "magic"
-                // name = "${project.name.replaceFirstChar(Char::titlecase)}"
                 name = "${project.name}"
                 description = "Create PDFs and other documents using a builder that abstracts use of Apache FOP."
                 url = "https://github.com/magictractor/${project.name}"
