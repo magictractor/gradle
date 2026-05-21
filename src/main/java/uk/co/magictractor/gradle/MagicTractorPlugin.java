@@ -87,6 +87,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
+        project.setGroup("magictractor.co.uk");
+
         // temp
         // project.getLogger().lifecycle("tasks.size(): " + project.getTasks().size());
         // project.getTasks().forEach(task -> project.getLogger().lifecycle("task " + task));
@@ -202,7 +204,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
     // Before doFirst for caching.
     // https://docs.gradle.org/9.5.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
     val jarDir = File("$rootDir/jars")
-
+    
     doFirst {
         val deleted = jarDir.deleteRecursively()
         if (deleted) {
