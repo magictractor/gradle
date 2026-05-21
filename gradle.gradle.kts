@@ -21,7 +21,9 @@ publishing {
             from(components["java"])
         
             pom {
-                name = "${project.name.replaceFirstChar(Char::titlecase)}"
+                // Revisit this - this causes the pom to be corrupt, missing the opening name tag and the start of "magic"
+                // name = "${project.name.replaceFirstChar(Char::titlecase)}"
+                name = "${project.name}"
                 description = "Create PDFs and other documents using a builder that abstracts use of Apache FOP."
                 url = "https://github.com/magictractor/${project.name}"
                 inceptionYear = "2026"
@@ -127,6 +129,10 @@ gradlePlugin {
         register("magictractor-plugin") {
             id = "uk.co.magictractor.magictractor-plugin"
             implementationClass = "uk.co.magictractor.gradle.MagicTractorPlugin"
+        }
+        register("magictractor-settings-plugin") {
+            id = "uk.co.magictractor.magictractor-settings-plugin"
+            implementationClass = "uk.co.magictractor.gradle.MagicTractorSettingsPlugin"
         }
     }
 }

@@ -1,81 +1,15 @@
-// settings.gradle.kts is intended to be the same for all magictractor projects.
-// There may be changes to settings.gradle.kts that should be rolled out to all magictractor projects.
-// TODO! magictractor-plugin should detect non-standard settings.gradle.kts
+// Other magictractor projects use the plugins in this project
+// to provide simpler and standardised build configurations.
 //
-// Project specific settings should be added to settings.project.gradle.kts or settings.project-localonly.gradle.kts.
-// settings.project.gradle.kts should always exist and set rootProject.name.
-// settings.project-localonly.gradle.kts is optional and typically contains includeBuild('../<siblingProject>')
-// entries when working on related projects.
+// This project does not use its own plugins for the build
+// so the build structure is not consistent with other 
+// Magic Tractor projects.
 
+// Delegate to the setting file used by magictractor-settings-plugin,
+// so this is consistent with using the plugin.
+// This applies settings.project.gradle.kts and setting.project-local.gradle.kts
+// (the latter is optional and not likely to be useful in this project because
+// there are no dependencies to use with includeBuild()). It also configures
+// the version catalog.
 
-pluginManagement {
-    // Make magictractor custom plugins available.
-    // https://docs.gradle.org/current/userguide/plugins_intermediate.html#sec:types_of_plugins
-
-    // Can use "includeBuild '../gradle'" as well as or instead of this.
-    repositories {
-        mavenLocal();
-    }
-}
-
-
-// settings.project.gradle.kts is expected to exist
-// and it must set rootProject.name
-rootProject.name = "__undefined"
-apply { from(file("settings.project.gradle.kts")) }
-if (rootProject.name == "__undefined") {
-    // An explicit rootProject.name is best practice.
-    // See https://docs.gradle.org/current/userguide/best_practices_general.html#name_your_root_project.
-    throw GradleException("rootProject.name should be set in settings.project.gradle.kts")
-}
-
-
-// includeBuild "../{project}" entries may be added to
-// settings.local.gradle to link to source in sibling projects
-// instead of a jar file.
-val localSettings = file("settings.project-local.gradle.kts")
-if (localSettings.exists()) {
-    apply { from(localSettings) }
-}
-
-
-// Use non-standard build file name because usual build.gradle.kts is cumbersome when working with multiple projects.
-rootProject.buildFileName = "${rootProject.name}.gradle.kts".replace("magictractor-", "")
-
-
-// settings.gradle may be copied without modification across magictractor.co.uk projects,
-// so the version catalog may include libraries that are not used in this project.
-//
-// https://docs.gradle.org/current/userguide/version_catalogs.html
-dependencyResolutionManagement {
-    versionCatalogs {
-        create("libs") {
-            version("slf4j", "2.0.17")
-            // Logback 1.3 will run on JDK 8. Logback 1.4 and later need JDK 11+.
-            version("logback", "1.3.15")
-            version("guava", "33.4.8-jre")
-            version("junit", "5.13.3")
-            version("junit-platform", "1.13.3")
-            version("assertj", "3.27.3")
-            
-            // Logging.
-            library("slf4j.api", "org.slf4j", "slf4j-api").versionRef("slf4j")
-            library("jcl.over.slf4j", "org.slf4j", "jcl-over-slf4j").versionRef("slf4j")
-            library("logback.classic", "ch.qos.logback", "logback-classic").versionRef("logback")
-            
-            // Utils.
-            library("guava", "com.google.guava", "guava").versionRef("guava")
-            
-            // Testing.
-            library("junit.jupiter", "org.junit.jupiter", "junit-jupiter").versionRef("junit")
-            library("junit.jupiter.platform", "org.junit.platform", "junit-platform-launcher").versionRef("junit-platform")
-            library("assertj", "org.assertj", "assertj-core").versionRef("assertj")
-
-    
-//            library("commons-lang3", "org.apache.commons", "commons-lang3").version {
-//                strictly "[3.8, 4.0["
-//                prefer "3.9"
-//            }
-        }
-    }
-}
+apply { from(file("${rootDir}/src/main/resources/magictractor.settings.gradle.kts")) }
