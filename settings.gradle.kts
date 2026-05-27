@@ -12,4 +12,15 @@
 // there are no dependencies to use with includeBuild()). It also configures
 // the version catalog.
 
-apply { from(file("${rootDir}/src/main/resources/magictractor.settings.gradle.kts")) }
+pluginManagement {
+    // gradlePluginPortal to get the Kotlin plugin
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    //id("magictractor-settings-plugin")
+}
+
+apply { from(file("${rootDir}/src/main/resources/magictractor-settings-plugin.settings.gradle.kts")) }

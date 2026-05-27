@@ -13,27 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle;
+package com.example;
 
-import java.net.URL;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.gradle.api.Plugin;
-import org.gradle.api.initialization.Settings;
+import org.junit.jupiter.api.Test;
 
-public class MagicTractorSettingsPlugin implements Plugin<Settings> {
+public class ExampleTest {
 
-    /**
-     * <p>
-     * Applies a Kotlin Gradle file, {@code magictractor.settings.gradle.kts}.
-     * That script will:
-     * </p>
-     * <ul>
-     * <li>Apply the {@code
-     */
-    @Override
-    public void apply(Settings settings) {
-        URL url = getClass().getResource("/magictractor-settings-plugin.settings.gradle.kts");
-        settings.apply(act -> act.from(url));
+    @Test
+    public void testGreeting() {
+        assertThat(new Example().greeting()).isEqualTo("hello");
     }
 
 }

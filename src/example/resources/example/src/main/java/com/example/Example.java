@@ -13,27 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle;
+package com.example;
 
-import java.net.URL;
+public class Example {
 
-import org.gradle.api.Plugin;
-import org.gradle.api.initialization.Settings;
-
-public class MagicTractorSettingsPlugin implements Plugin<Settings> {
-
-    /**
-     * <p>
-     * Applies a Kotlin Gradle file, {@code magictractor.settings.gradle.kts}.
-     * That script will:
-     * </p>
-     * <ul>
-     * <li>Apply the {@code
-     */
-    @Override
-    public void apply(Settings settings) {
-        URL url = getClass().getResource("/magictractor-settings-plugin.settings.gradle.kts");
-        settings.apply(act -> act.from(url));
+    public String greeting() {
+        return "hello";
     }
 
 }

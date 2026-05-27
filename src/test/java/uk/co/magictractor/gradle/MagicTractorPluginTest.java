@@ -15,6 +15,12 @@
  */
 package uk.co.magictractor.gradle;
 
+import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Paths;
+
+import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 
@@ -24,13 +30,17 @@ import org.junit.jupiter.api.Test;
 public class MagicTractorPluginTest {
 
     @Test
-    public void t() {
-        GradleRunner.create();
+    public void t() throws URISyntaxException {
+        URL url = getClass().getResource("/example");
+        File testProjectDir = Paths.get(url.toURI()).toFile();
 
-        //        BuildResult result = GradleRunner.create()
-        //                .withProjectDir(testProjectDir)
-        //                .withArguments("helloWorld")
-        //                .build();
+        BuildResult result = GradleRunner.create()
+                .withProjectDir(testProjectDir)
+                .withArguments("clean", "build")
+                // forwardOutput temporary while developing
+                .forwardOutput()
+                .withDebug(true)
+                .build();
     }
 
 }

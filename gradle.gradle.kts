@@ -59,6 +59,20 @@ repositories {
     mavenCentral()
 }
 
+java {  
+    // Both test resources because they won't be packaged in the jar.
+    //sourceSets["test"].java {
+        //srcDir("src/example/resources/src/main/java")
+        //srcDir("src/example/resources/src/test/java")
+    //}
+    
+    sourceSets["test"].resources {
+        srcDir("src/example/resources")
+        // Without the exclusion, Eclipse validates Java files and shows package errors (could probably adjust the validator).
+        exclude("**/*.java")
+    }
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
@@ -118,8 +132,6 @@ dependencies {
     testImplementation(libs.assertj);
 }
 
-
-// This creates a new minimal project in the Maven repository that has a dependency on this project.
 gradlePlugin {
     plugins {
         register("magictractor-plugin") {

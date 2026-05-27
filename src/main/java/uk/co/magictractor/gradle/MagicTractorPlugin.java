@@ -15,20 +15,20 @@
  */
 package uk.co.magictractor.gradle;
 
-import java.io.File;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.MinimalExternalModuleDependency;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
+import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.publish.PublicationContainer;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPom;
 import org.gradle.api.publish.maven.MavenPublication;
-import org.gradle.api.tasks.Delete;
-import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 
@@ -49,35 +49,6 @@ import org.gradle.api.tasks.testing.Test;
  *
  * @see https://discuss.gradle.org/t/apply-from-vs-apply-plugin-aka-build-logic-reuse/31922/2
  */
-// jars dierectory not ported because jars are available by default in build/libs (now visible in my Eclipse)
-//
-//@NonNullApi
-//public class ExamplePlugin implements Plugin<Project> {
-//
-//    private final String REPO = "file:///tmp/somewhere";
-//
-//    @Override
-//    public void apply(final Project project) {
-//        final Logger logger = project.getLogger();
-//        final ExtensionContainer ext = project.getExtensions();
-//        final PluginContainer plugins = project.getPlugins();
-//        logger.info("applying java plugin");
-//        plugins.apply(JavaPlugin.class);
-//        logger.info("download dependencies from maven central");
-//        project.getRepositories().mavenCentral();
-//        logger.info("all java compile tasks will report all warnings");
-//        project.getTasks().withType(JavaCompile.class).configureEach(t -> t.getOptions().getCompilerArgs().add("-Xlint:all"));
-//        logger.info("tests will be able to use assertj lib");
-//        project.getDependencies().add("testImplementation", "org.assertj:assertj-core:3.12.2");
-//        logger.info("maven publish plugin");
-//        plugins.apply(MavenPublishPlugin.class);
-//        logger.info("configuring publishing repository to be a maven type hosted at {}", REPO);
-//        ext.getByType(PublishingExtension.class).getRepositories().maven(m -> m.setUrl(REPO));
-//        logger.info("adding an end-user dsl to apply preferences");
-//        ext.create("myPlugin", ExamplePluginDsl.class, project);
-//    }
-//}
-//
 // TODO! Fix availability of gradle source.
 // https://discuss.gradle.org/t/eclipse-buildship-gradle-plugin-development-gradle-api-sources-missing/33461
 // https://discuss.gradle.org/t/custom-plugins-dont-include-source/5651
@@ -87,11 +58,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        project.setGroup("magictractor.co.uk");
-
-        // temp
-        // project.getLogger().lifecycle("tasks.size(): " + project.getTasks().size());
-        // project.getTasks().forEach(task -> project.getLogger().lifecycle("task " + task));
+        project.setGroup("uk.co.magictractor");
 
         project.getExtensions().create("magictractor", DefaultMagicTractorExtension.class, project);
 
@@ -104,23 +71,24 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     private void applyConfigurations(Project project) {
         configureRepositories(project);
+        configureDefaultDependencies(project);
     }
+
+    // apply not working...
+    // https://discuss.gradle.org/t/plugins-and-apply-from-in-the-kotlin-dsl/28662/5
+    //apply { from(file("src/main/resources/magictractor.gradle.kts")) }
 
     private void afterEvaluateConfigurations(Project project) {
         project.getLogger().lifecycle("Test task count : " + project.getTasks().withType(Test.class).size());
 
         project.getTasks().withType(JavaCompile.class).forEach(this::configureJavaCompileTask);
         project.getTasks().withType(Test.class).forEach(this::configureTestTask);
-        project.getTasks().withType(Jar.class).forEach(this::configureJarTask);
-        project.getTasks().withType(Delete.class).forEach(this::configureDeleteTask);
 
-        //        JavaPluginExtension javaExtension = project.getExtensions().findByType(JavaPluginExtension.class);
-        //        if (javaExtension != null) {
-        //            configureJavaExtension(javaExtension);
-        //        }
         configureOptionalExtension(project, JavaPluginExtension.class, this::configureJavaPluginExtension);
         configureOptionalExtension(project, PublishingExtension.class, this::configurePublishingExtension);
     }
+
+    // https://discuss.gradle.org/t/programmatically-adding-dependencies/7575/2
 
     private <EXTENSION> void configureOptionalExtension(Project project, Class<EXTENSION> extensionType, Consumer<EXTENSION> extensionConfiguration) {
         EXTENSION extension = project.getExtensions().findByType(extensionType);
@@ -155,6 +123,46 @@ public class MagicTractorPlugin implements Plugin<Project> {
         repositories.mavenLocal();
     }
 
+    //    dependencies {
+    //        // Logger API.
+    //        implementation(libs.slf4j.api)
+    //        // Logger implementation for unit tests.
+    //        runtimeOnly(libs.logback.classic)
+    //
+    //        testImplementation(libs.junit.jupiter)
+    //        testRuntimeOnly(libs.junit.jupiter.platform)
+    //        testImplementation(libs.assertj)
+    //    }
+    private void configureDefaultDependencies(Project project) {
+        DependencyHandler dependencyHandler = project.getDependencies();
+
+        // testImplementation 'org.mockito:mockito-core:4.11.0' (from magictractor-fo)
+        dependencyHandler.add("testImplementation", "org.mockito:mockito-core:4.11.0");
+
+        //System.out.println("dependencyHandler.getArtifactTypes()");
+        // One org.gradle.api.internal.artifacts.type.DefaultArtifactTypeContainer$DefaultArtifactTypeDefinition_Decorated@154d1cd0
+        //dependencyHandler.getArtifactTypes().forEach(System.out::println);
+
+        // Javadoc says metadata of dependencies can be modified with this...
+        //dependencyHandler.getModules().
+
+        // TODO! use version catalog
+
+        //VersionCatalogsExtension vce = project.getExtensions().findByType(VersionCatalogsExtension.class);
+        // vce: extension 'versionCatalogs'  class org.gradle.api.internal.catalog.DefaultDependenciesAccessors$DefaultVersionCatalogsExtension_Decorated
+        //project.getLogger().lifecycle("vce: " + vce + "  " + vce.getClass());
+
+        // org.gradle.accessors.dm.LibrariesForLibs_Decorated - but where does LibrariesForLibs come from??
+        // https://github.com/gradle/gradle/issues/19813
+        ExternalModuleDependencyFactory versionCatalog = (ExternalModuleDependencyFactory) project.getExtensions().findByName("libs");
+
+        MinimalExternalModuleDependency assertj = versionCatalog.create("assertj").get();
+        // moduleIdentier (field): "org.assertj:assertj-core" (DefaultModuleIdentifier)
+        // versionConstraint (field): 3.27.3 (DefaultMutableVersionConstraint)
+        // assertj: org.assertj:assertj-core:3.27.3
+        //project.getLogger().lifecycle("assertj: " + assertj.toString());
+    }
+
     /**
      * Typically called twice, for {@code :javaCompile} and
      * {@code :javaTestCompile}.
@@ -168,71 +176,6 @@ public class MagicTractorPlugin implements Plugin<Project> {
         testTask.useJUnitPlatform();
 
         testTask.getLogger().lifecycle("configured Test");
-    }
-
-    /**
-     * <p>
-     * Set up a directory that will contain a copy of generated jar files. The
-     * directory and jra files will be removed by the {@code clean} task.
-     * </p>
-     * <p>
-     * Was
-     * </p>
-     * <pre>
-     * tasks.withType<Jar>().configureEach {
-     *     destinationDirectory.set(file("$rootDir/jars"))
-     * }
-     * </pre>
-     */
-    private void configureJarTask(Jar jarTask) {
-        jarTask.getLogger().lifecycle("Default jar directory: " + jarTask.getDestinationDirectory().get());
-        //jarTask.getDestinationDirectory().
-
-        //      project.getLogger().lifecycle("configured Test");
-    }
-
-    /**
-     * <p>
-     * Remove the directory that contains a copy of generated jar files.
-     * </p>
-     * <p>
-     * Was
-     * </p>
-     * <pre>
-    // :clean
-    tasks.withType<Delete>().configureEach {
-    // Before doFirst for caching.
-    // https://docs.gradle.org/9.5.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
-    val jarDir = File("$rootDir/jars")
-    
-    doFirst {
-        val deleted = jarDir.deleteRecursively()
-        if (deleted) {
-            logger.lifecycle("jars deleted")
-        } else {
-            logger.warn("Failed to delete " + jarDir)
-        }
-    }
-    }
-     * </pre>
-     */
-    private void configureDeleteTask(Delete deleteTask) {
-        // deleteTask.des
-
-        //project.getLogger().lifecycle("delete config");
-        // File jarDir = new File(project.getRootDir(), "jars");
-
-        File jarDir = new File(deleteTask.getProject().getRootDir(), "jars");
-
-        deleteTask.doFirst(task -> {
-
-            //task.getProject().getRootDir()
-            // Hmm. Does Gradle rovide a wrapper that gives deleteRecursively?
-            // jarDir.d
-            task.getLogger().lifecycle("delete " + jarDir);
-
-            //Files.deleteIfExists(null);
-        });
     }
 
     //    java {
