@@ -17,8 +17,6 @@ package uk.co.magictractor.gradle;
 
 import java.io.File;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Paths;
 
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
@@ -31,12 +29,26 @@ public class MagicTractorPluginTest {
 
     @Test
     public void t() throws URISyntaxException {
-        URL url = getClass().getResource("/example");
-        File testProjectDir = Paths.get(url.toURI()).toFile();
+        File testProjectDir = new ProjectBuilder().build();
+        //System.out.println("testProjectDir: " + testProjectDir);
+
+        // TODO! also check for GRADLE_USER_HOME
+        // TODO! and move set up to a util/helper
+
+        // Default in Windows 11 was %USERPROFILE%\AppData\Local\Temp\.gradle-test-kit
+        // so gradle.properties was not picked up.
+        String userHome = System.getProperty("user.home");
+        File gradleUserHome = new File(userHome, ".gradle");
+        if (!gradleUserHome.exists()) {
+            throw new IllegalStateException();
+        }
 
         BuildResult result = GradleRunner.create()
+                .withTestKitDir(gradleUserHome)
                 .withProjectDir(testProjectDir)
-                .withArguments("clean", "build")
+                // TODO! why does this fail in Eclipse when using the configuration cache?
+                .withArguments("-Dorg.gradle.configuration-cache=false", "clean", "build")
+                //.withArguments("clean", "build")
                 // forwardOutput temporary while developing
                 .forwardOutput()
                 .withDebug(true)

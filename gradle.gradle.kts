@@ -59,17 +59,13 @@ repositories {
     mavenCentral()
 }
 
-java {  
-    // Both test resources because they won't be packaged in the jar.
-    //sourceSets["test"].java {
-        //srcDir("src/example/resources/src/main/java")
-        //srcDir("src/example/resources/src/test/java")
-    //}
-    
+java {
+    // All test resources because .java files will be copied for compilation using GradleRunner
+    // and they will not be packaged in the jar.
     sourceSets["test"].resources {
+        srcDir("src/example/java")
+        srcDir("src/example/test")
         srcDir("src/example/resources")
-        // Without the exclusion, Eclipse validates Java files and shows package errors (could probably adjust the validator).
-        exclude("**/*.java")
     }
 }
 
