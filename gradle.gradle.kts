@@ -2,7 +2,10 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 import org.gradle.plugins.ide.eclipse.model.Library
 
 plugins {
-    // https://docs.gradle.org/current/userguide/java_gradle_plugin.html
+    // https://docs.gradle.org/current/userguide/java_gradle_plugin.html/
+    // gradle-tooling-api and gradle-test-kit unavailable from regular repositories?
+    // https://repo.gradle.org/ui/native/libs-releases-remote-cache/org/gradle/gradle-tooling-api/9.5.0
+    // is present but does not contain expected classes such as org.gradle.api.Plugin.
     id("java-gradle-plugin")
     
     // https://docs.gradle.org/current/userguide/publishing_maven.html
