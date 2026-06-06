@@ -58,9 +58,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        project.setGroup("uk.co.magictractor");
-
-        project.getExtensions().create("magictractor", DefaultMagicTractorExtension.class, project);
+        DefaultMagicTractorExtension extension = project.getExtensions()
+                .create("magictractor", DefaultMagicTractorExtension.class, project);
 
         applyConfigurations(project);
 
@@ -70,6 +69,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
     }
 
     private void applyConfigurations(Project project) {
+        configureDefaultPlugins(project);
+        configureGroup(project);
         configureRepositories(project);
         configureDefaultDependencies(project);
     }
@@ -102,6 +103,17 @@ public class MagicTractorPlugin implements Plugin<Project> {
         if (extension != null) {
             extensionConfiguration.accept(project, extension);
         }
+    }
+
+    private void configureDefaultPlugins(Project project) {
+        // TODO! maybe "java" or "java-platform" for some projects??
+        project.getPlugins().apply("java-library");
+        // https://docs.gradle.org/current/userguide/publishing_maven.html
+        project.getPlugins().apply("maven-publish");
+    }
+
+    private void configureGroup(Project project) {
+        project.setGroup("uk.co.magictractor");
     }
 
     /**
