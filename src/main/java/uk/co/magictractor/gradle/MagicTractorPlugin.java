@@ -123,44 +123,47 @@ public class MagicTractorPlugin implements Plugin<Project> {
         repositories.mavenLocal();
     }
 
-    //    dependencies {
-    //        // Logger API.
-    //        implementation(libs.slf4j.api)
-    //        // Logger implementation for unit tests.
-    //        runtimeOnly(libs.logback.classic)
-    //
-    //        testImplementation(libs.junit.jupiter)
-    //        testRuntimeOnly(libs.junit.jupiter.platform)
-    //        testImplementation(libs.assertj)
-    //    }
+    /**
+     * <p>
+     * Create standard dependencies for logging and unit testing.
+     * </p>
+     * <p>
+     * Previously this boilerplate was included in all projects.
+     * </p>
+     * <pre>
+     *  dependencies {
+     *      // Logger API.
+     *      implementation(libs.slf4j.api)
+     *      // Logger implementation for unit tests.
+     *      runtimeOnly(libs.logback.classic)
+     *
+     *      testImplementation(libs.junit.jupiter)
+     *      testRuntimeOnly(libs.junit.jupiter.platform)
+     *      testImplementation(libs.assertj)
+     *  }
+     *  </pre>
+     */
     private void configureDefaultDependencies(Project project) {
         DependencyHandler dependencyHandler = project.getDependencies();
-
-        // testImplementation 'org.mockito:mockito-core:4.11.0' (from magictractor-fo)
-        dependencyHandler.add("testImplementation", "org.mockito:mockito-core:4.11.0");
-
-        //System.out.println("dependencyHandler.getArtifactTypes()");
-        // One org.gradle.api.internal.artifacts.type.DefaultArtifactTypeContainer$DefaultArtifactTypeDefinition_Decorated@154d1cd0
-        //dependencyHandler.getArtifactTypes().forEach(System.out::println);
-
-        // Javadoc says metadata of dependencies can be modified with this...
-        //dependencyHandler.getModules().
-
-        // TODO! use version catalog
-
-        //VersionCatalogsExtension vce = project.getExtensions().findByType(VersionCatalogsExtension.class);
-        // vce: extension 'versionCatalogs'  class org.gradle.api.internal.catalog.DefaultDependenciesAccessors$DefaultVersionCatalogsExtension_Decorated
-        //project.getLogger().lifecycle("vce: " + vce + "  " + vce.getClass());
-
-        // org.gradle.accessors.dm.LibrariesForLibs_Decorated - but where does LibrariesForLibs come from??
-        // https://github.com/gradle/gradle/issues/19813
         ExternalModuleDependencyFactory versionCatalog = (ExternalModuleDependencyFactory) project.getExtensions().findByName("libs");
 
-        MinimalExternalModuleDependency assertj = versionCatalog.create("assertj").get();
-        // moduleIdentier (field): "org.assertj:assertj-core" (DefaultModuleIdentifier)
-        // versionConstraint (field): 3.27.3 (DefaultMutableVersionConstraint)
-        // assertj: org.assertj:assertj-core:3.27.3
-        //project.getLogger().lifecycle("assertj: " + assertj.toString());
+        // Logging libs.
+        addDependency(dependencyHandler, versionCatalog, "implementation", "slf4j.api");
+        addDependency(dependencyHandler, versionCatalog, "runtimeOnly", "logback.classic");
+
+        // Unit testing libs.
+        addDependency(dependencyHandler, versionCatalog, "testImplementation", "junit.jupiter");
+        addDependency(dependencyHandler, versionCatalog, "testRuntimeOnly", "junit.jupiter.platform");
+        addDependency(dependencyHandler, versionCatalog, "testImplementation", "assertj");
+    }
+
+    private void addDependency(DependencyHandler dependencyHandler,
+            ExternalModuleDependencyFactory versionCatalog,
+            String configurationName,
+            String alias) {
+
+        MinimalExternalModuleDependency dependency = versionCatalog.create(alias).get();
+        dependencyHandler.add(configurationName, dependency);
     }
 
     /**
