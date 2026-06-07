@@ -25,12 +25,14 @@ import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Property;
 import org.gradle.api.publish.PublicationContainer;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPom;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
 /**
  * <p>
@@ -58,21 +60,18 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        DefaultMagicTractorExtension extension = project.getExtensions()
-                .create("magictractor", DefaultMagicTractorExtension.class, project);
+        MagicTractorExtension extension = project.getExtensions()
+                .create("magictractor", DefaultMagicTractorExtension.class);
 
-        applyConfigurations(project);
-
-        // Avoid afterEvaluate()?
-        // https://discuss.gradle.org/t/is-project-afterevaluate-the-proper-way-for-gradle-plugin-to-dynamically-create-default-tasks/31349
-        project.afterEvaluate(this::afterEvaluateConfigurations);
-    }
-
-    private void applyConfigurations(Project project) {
         configureDefaultPlugins(project);
+        configureJavaVersion(project, extension);
         configureGroup(project);
         configureRepositories(project);
         configureDefaultDependencies(project);
+
+        // Avoid afterEvaluate()? - use doFirst() instead?
+        // https://discuss.gradle.org/t/is-project-afterevaluate-the-proper-way-for-gradle-plugin-to-dynamically-create-default-tasks/31349
+        project.afterEvaluate(this::afterEvaluateConfigurations);
     }
 
     // apply not working...
@@ -110,6 +109,24 @@ public class MagicTractorPlugin implements Plugin<Project> {
         project.getPlugins().apply("java-library");
         // https://docs.gradle.org/current/userguide/publishing_maven.html
         project.getPlugins().apply("maven-publish");
+    }
+
+    private void configureJavaVersion(Project project, MagicTractorExtension extension) {
+        Property<JavaLanguageVersion> lv = project.getExtensions()
+                .findByType(JavaPluginExtension.class)
+                .getToolchain()
+                .getLanguageVersion();
+
+        lv.convention(
+            extension.getJavaVersion()
+                    .orElse(project.provider(() -> {
+                        throw new IllegalStateException("magictractor.javaVersion is required");
+                    }))
+                    .map(JavaLanguageVersion::of));
+
+        // Would be nice if this gave a more specific error.
+        // Currently "The value for property 'languageVersion' cannot be changed any further."
+        lv.disallowChanges();
     }
 
     private void configureGroup(Project project) {
@@ -189,8 +206,6 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     private void configureTestTask(Test testTask) {
         testTask.useJUnitPlatform();
-
-        testTask.getLogger().lifecycle("configured Test");
     }
 
     //    java {

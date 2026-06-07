@@ -22,6 +22,25 @@ import org.gradle.api.provider.Property;
  */
 public interface MagicTractorExtension {
 
+    /**
+     * <p>
+     * The Java version of the source files and target classes.
+     * <p>
+     * <p>
+     * This is required. LTS releases should generally be used (8, 11, 17, 21,
+     * 25 etc).
+     * </p>
+     * <p>
+     * This replaces {@code toolchain} declarations such as <pre>
+     * java {
+     *     toolchain {
+     *         languageVersion = JavaLanguageVersion.of(8)
+     *     }
+     * }
+     * </pre>
+     */
+    Property<Integer> getJavaVersion();
+
     /** The description to be included in the {@code pom.xml} file. */
     Property<String> getPomDescription();
 
