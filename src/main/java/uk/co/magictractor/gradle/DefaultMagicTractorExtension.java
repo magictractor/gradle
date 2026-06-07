@@ -17,21 +17,31 @@ package uk.co.magictractor.gradle;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Project;
 import org.gradle.api.internal.provider.PropertyFactory;
 import org.gradle.api.provider.Property;
 
 public abstract class DefaultMagicTractorExtension implements MagicTractorExtension {
+
+    private final Project project;
 
     private final Property<Integer> javaVersion;
     private final Property<String> pomDescription;
     private final Property<String> pomInceptionYear;
 
     @Inject
-    public DefaultMagicTractorExtension(PropertyFactory propertyFactory) {
+    public DefaultMagicTractorExtension(Project project, PropertyFactory propertyFactory) {
+        this.project = project;
+
         javaVersion = propertyFactory.property(Integer.class);
         // TODO! convention() should read the description from the first para of README.md
         pomDescription = propertyFactory.property(String.class);
         pomInceptionYear = propertyFactory.property(String.class);
+    }
+
+    @Override
+    public Project getProject() {
+        return project;
     }
 
     @Override

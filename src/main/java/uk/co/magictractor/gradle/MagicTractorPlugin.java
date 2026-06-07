@@ -15,9 +15,6 @@
  */
 package uk.co.magictractor.gradle;
 
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
@@ -26,7 +23,7 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Property;
-import org.gradle.api.publish.PublicationContainer;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPom;
 import org.gradle.api.publish.maven.MavenPublication;
@@ -54,83 +51,58 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion;
 // TODO! Fix availability of gradle source.
 // https://discuss.gradle.org/t/eclipse-buildship-gradle-plugin-development-gradle-api-sources-missing/33461
 // https://discuss.gradle.org/t/custom-plugins-dont-include-source/5651
-//
-// https://discuss.gradle.org/t/custom-plugins-how-to-avoid-using-afterevaluate-when-setting-another-plugins-extension-configuration/42314/3
 public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        MagicTractorExtension extension = project.getExtensions()
+        MagicTractorExtension mte = project.getExtensions()
                 .create("magictractor", DefaultMagicTractorExtension.class);
 
-        configureDefaultPlugins(project);
-        configureJavaVersion(project, extension);
-        configureGroup(project);
-        configureRepositories(project);
-        configureDefaultDependencies(project);
-
-        // Avoid afterEvaluate()? - use doFirst() instead?
-        // https://discuss.gradle.org/t/is-project-afterevaluate-the-proper-way-for-gradle-plugin-to-dynamically-create-default-tasks/31349
-        project.afterEvaluate(this::afterEvaluateConfigurations);
+        configureDefaultPlugins(mte);
+        configureRepositories(mte);
+        configureGroup(mte);
+        configureJavaPluginExtension(mte);
+        configureJavaCompileTasks(mte);
+        configureTestTasks(mte);
+        configureDefaultDependencies(mte);
+        configurePublishingExtension(mte);
     }
 
-    // apply not working...
-    // https://discuss.gradle.org/t/plugins-and-apply-from-in-the-kotlin-dsl/28662/5
-    //apply { from(file("src/main/resources/magictractor.gradle.kts")) }
+    private void configureDefaultPlugins(MagicTractorExtension mte) {
+        Project project = mte.getProject();
 
-    private void afterEvaluateConfigurations(Project project) {
-        project.getLogger().lifecycle("Test task count : " + project.getTasks().withType(Test.class).size());
-
-        project.getTasks().withType(JavaCompile.class).forEach(this::configureJavaCompileTask);
-        project.getTasks().withType(Test.class).forEach(this::configureTestTask);
-
-        configureOptionalExtension(project, JavaPluginExtension.class, this::configureJavaPluginExtension);
-        configureOptionalExtension(project, PublishingExtension.class, this::configurePublishingExtension);
-    }
-
-    // https://discuss.gradle.org/t/programmatically-adding-dependencies/7575/2
-
-    private <EXTENSION> void configureOptionalExtension(Project project, Class<EXTENSION> extensionType, Consumer<EXTENSION> extensionConfiguration) {
-        EXTENSION extension = project.getExtensions().findByType(extensionType);
-        if (extension != null) {
-            extensionConfiguration.accept(extension);
-        }
-    }
-
-    private <EXTENSION> void configureOptionalExtension(Project project, Class<EXTENSION> extensionType, BiConsumer<Project, EXTENSION> extensionConfiguration) {
-        EXTENSION extension = project.getExtensions().findByType(extensionType);
-        if (extension != null) {
-            extensionConfiguration.accept(project, extension);
-        }
-    }
-
-    private void configureDefaultPlugins(Project project) {
         // TODO! maybe "java" or "java-platform" for some projects??
         project.getPlugins().apply("java-library");
         // https://docs.gradle.org/current/userguide/publishing_maven.html
         project.getPlugins().apply("maven-publish");
     }
 
-    private void configureJavaVersion(Project project, MagicTractorExtension extension) {
-        Property<JavaLanguageVersion> lv = project.getExtensions()
-                .findByType(JavaPluginExtension.class)
-                .getToolchain()
-                .getLanguageVersion();
+    private void configureJavaPluginExtension(MagicTractorExtension mte) {
+        Project project = mte.getProject();
 
-        lv.convention(
-            extension.getJavaVersion()
-                    .orElse(project.provider(() -> {
-                        throw new IllegalStateException("magictractor.javaVersion is required");
-                    }))
-                    .map(JavaLanguageVersion::of));
+        JavaPluginExtension jpe = project.getExtensions()
+                .findByType(JavaPluginExtension.class);
+
+        Property<JavaLanguageVersion> languageVersionProperty = jpe.getToolchain()
+                .getLanguageVersion();
+        Provider<JavaLanguageVersion> languageVersion = mte.getJavaVersion()
+                .orElse(project.provider(() -> {
+                    throw new IllegalStateException("magictractor.javaVersion is required");
+                }))
+                .map(JavaLanguageVersion::of);
+
+        languageVersionProperty.convention(languageVersion);
 
         // Would be nice if this gave a more specific error.
         // Currently "The value for property 'languageVersion' cannot be changed any further."
-        lv.disallowChanges();
+        // Maybe validate MagicTractorExtension?
+        languageVersionProperty.disallowChanges();
+
+        jpe.withSourcesJar();
     }
 
-    private void configureGroup(Project project) {
-        project.setGroup("uk.co.magictractor");
+    private void configureGroup(MagicTractorExtension mte) {
+        mte.getProject().setGroup("uk.co.magictractor");
     }
 
     /**
@@ -143,10 +115,10 @@ public class MagicTractorPlugin implements Plugin<Project> {
      * non-standard repositories.
      */
     //  https://docs.gradle.org/current/userguide/declaring_repositories.html
-    private void configureRepositories(Project project) {
+    private void configureRepositories(MagicTractorExtension mte) {
         // Unit test could run a task to list repos?
         // https://stackoverflow.com/questions/32143437/how-to-list-the-configured-repositories
-        RepositoryHandler repositories = project.getRepositories();
+        RepositoryHandler repositories = mte.getProject().getRepositories();
         repositories.mavenCentral();
         // Local maven used for other magictractor projects.
         repositories.mavenLocal();
@@ -172,7 +144,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
      *  }
      *  </pre>
      */
-    private void configureDefaultDependencies(Project project) {
+    private void configureDefaultDependencies(MagicTractorExtension mte) {
+        Project project = mte.getProject();
         DependencyHandler dependencyHandler = project.getDependencies();
         ExternalModuleDependencyFactory versionCatalog = (ExternalModuleDependencyFactory) project.getExtensions().findByName("libs");
 
@@ -195,6 +168,10 @@ public class MagicTractorPlugin implements Plugin<Project> {
         dependencyHandler.add(configurationName, dependency);
     }
 
+    private void configureJavaCompileTasks(MagicTractorExtension mte) {
+        mte.getProject().getTasks().withType(JavaCompile.class, this::configureJavaCompileTask);
+    }
+
     /**
      * Typically called twice, for {@code :javaCompile} and
      * {@code :javaTestCompile}.
@@ -204,60 +181,38 @@ public class MagicTractorPlugin implements Plugin<Project> {
         javaCompileTask.getOptions().setEncoding("UTF-8");
     }
 
+    private void configureTestTasks(MagicTractorExtension mte) {
+        mte.getProject().getTasks().withType(Test.class, this::configureTestTask);
+    }
+
     private void configureTestTask(Test testTask) {
         testTask.useJUnitPlatform();
     }
 
-    //    java {
-    //        // task: extension 'java'  class org.gradle.api.plugins.internal.DefaultJavaPluginExtension_Decorated
-    //        //logger.lifecycle("task: " + this + "  " + this.javaClass)
-    //
-    //        toolchain {
-    //            languageVersion = JavaLanguageVersion.of(8)
-    //        }
-    //
-    //        withSourcesJar()
-    //        //withJavadocJar()
-    //    }
-    //
-    // could use $ ./gradlew javaToolchains for testing?
-    private void configureJavaPluginExtension(JavaPluginExtension javaExtension) {
-        // Setting the toolchain language version remains in the build file
-        // because Buildship does not detect the correct version if it is done here.
-        //        javaExtension.toolchain(toolchain -> {
-        //            toolchain.getLanguageVersion().convention(JavaLanguageVersion.of(8));
-        //            project.getLogger().lifecycle("toolchain: " + toolchain);
-        //        });
-
-        javaExtension.withSourcesJar();
-    }
-
     // https://docs.gradle.org/current/userguide/publishing_maven.html
-    private void configurePublishingExtension(Project project, PublishingExtension publishingExtension) {
-        publishingExtension.publications(publications -> configurePublications(project, publications));
-    }
+    private void configurePublishingExtension(MagicTractorExtension mte) {
+        PublishingExtension publishingExtension = mte.getProject().getExtensions().getByType(PublishingExtension.class);
 
-    private void configurePublications(Project project, PublicationContainer publications) {
-        MavenPublication maven = publications.create("mavenJava", MavenPublication.class);
+        //publishingExtension.publications(publications -> configurePublications(mte, publications));
+
+        MavenPublication maven = publishingExtension.getPublications().create("mavenJava", MavenPublication.class);
 
         // Wthout from() only the pom file would be created.
         // How to get the SoftwareCompontent matching "from components.java"?
         // Looks like project.getComponents().getByName("java");
-        maven.from(project.getComponents().getByName("java"));
+        maven.from(mte.getProject().getComponents().getByName("java"));
 
-        maven.pom(pom -> configurePom(project, pom));
+        MavenPom pom = maven.getPom();
 
-        //publications.add(pom);
-    }
+        mte.getProject().getRootDir();
 
-    private void configurePom(Project project, MavenPom pom) {
         // Name used in the artifact. Libs should have "magictractor-" prefix.
-        String projectName = project.getName();
+        String projectName = mte.getProject().getName();
         // Name without "magictractor-" prefix used in Github.
         String shortProjectName = projectName.replace("magictractor-", "");
         String url = "https://github.com/magictractor/" + shortProjectName;
 
-        MagicTractorExtension mte = project.getExtensions().findByType(MagicTractorExtension.class);
+        //MagicTractorExtension mte = project.getExtensions().findByType(MagicTractorExtension.class);
 
         pom.getName().set(shortProjectName);
         pom.getDescription().set(mte.getPomDescription());
