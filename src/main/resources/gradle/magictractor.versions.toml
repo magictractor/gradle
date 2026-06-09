@@ -1,0 +1,29 @@
+# Naming should follow the conventions described in
+# https://blog.gradle.org/best-practices-naming-version-catalog-entries#catalog-entry-naming-conventions
+
+[versions]
+slf4j = "2.0.17"
+# Logback 1.3 will run on JDK 8. Logback 1.4 and later need JDK 11+.
+logback = "1.3.15"
+
+junit = "5.13.3"
+junit-platform = "1.13.3"
+assertj = "3.27.3"
+
+guava = "33.4.8-jre"
+
+ 
+[libraries]
+# Logging
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+jcl-over-slf4j = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Testing
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter-platform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+assertj= { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+
+# Utils
+guava = { module = "com.google.guava:guava", version.ref = "guava" }

@@ -5,22 +5,13 @@
 // so the build structure is not consistent with other 
 // Magic Tractor projects.
 
-// Delegate to the setting file used by magictractor-settings-plugin,
-// so this is consistent with using the plugin.
-// This applies settings.project.gradle.kts and setting.project-local.gradle.kts
-// (the latter is optional and not likely to be useful in this project because
-// there are no dependencies to use with includeBuild()). It also configures
-// the version catalog.
+rootProject.name = "magictractor-gradle"
+rootProject.buildFileName = "gradle.gradle.kts"
 
-pluginManagement {
-    // gradlePluginPortal to get the Kotlin plugin
-    repositories {
-        gradlePluginPortal()
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("libs") {
+            from(files("src/main/resources/gradle/magictractor.versions.toml"))
+        }
     }
 }
-
-plugins {
-    //id("magictractor-settings-plugin")
-}
-
-apply { from(file("${rootDir}/src/main/resources/magictractor-settings-plugin.settings.gradle.kts")) }

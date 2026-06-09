@@ -150,12 +150,12 @@ public class MagicTractorPlugin implements Plugin<Project> {
         ExternalModuleDependencyFactory versionCatalog = (ExternalModuleDependencyFactory) project.getExtensions().findByName("libs");
 
         // Logging libs.
-        addDependency(dependencyHandler, versionCatalog, "implementation", "slf4j.api");
+        addDependency(dependencyHandler, versionCatalog, "implementation", "slf4j-api");
         addDependency(dependencyHandler, versionCatalog, "runtimeOnly", "logback.classic");
 
         // Unit testing libs.
-        addDependency(dependencyHandler, versionCatalog, "testImplementation", "junit.jupiter");
-        addDependency(dependencyHandler, versionCatalog, "testRuntimeOnly", "junit.jupiter.platform");
+        addDependency(dependencyHandler, versionCatalog, "testImplementation", "junit-jupiter");
+        addDependency(dependencyHandler, versionCatalog, "testRuntimeOnly", "junit-jupiter-platform");
         addDependency(dependencyHandler, versionCatalog, "testImplementation", "assertj");
     }
 
