@@ -29,7 +29,7 @@ public class MagicTractorPluginTest {
 
     @Test
     public void t() throws URISyntaxException {
-        File testProjectDir = new ProjectBuilder().build();
+        File testProjectDir = new ProjectDirBuilder().build();
         //System.out.println("testProjectDir: " + testProjectDir);
 
         // TODO! also check for GRADLE_USER_HOME
