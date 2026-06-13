@@ -26,7 +26,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ProjectBuilder {
+public class ProjectDirBuilder {
 
     private static final File BUILD_DIR = new File("build");
 
@@ -35,7 +35,7 @@ public class ProjectBuilder {
 
     private boolean buildDone;
 
-    public ProjectBuilder() {
+    public ProjectDirBuilder() {
         initFileConfigs();
     }
 
@@ -117,7 +117,7 @@ public class ProjectBuilder {
         fileConfigs.put(name, fileConfig);
     }
 
-    public ProjectBuilder withTestProjectDir(File testProjectDir) {
+    public ProjectDirBuilder withTestProjectDir(File testProjectDir) {
         checkBuildNotDone();
         if (testProjectDir != null) {
             throw new IllegalStateException();
