@@ -24,23 +24,78 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Supplier;
+
+import javax.inject.Inject;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
+import org.gradle.api.internal.artifacts.DependencyResolutionServices;
 import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser;
+import org.gradle.api.invocation.Gradle;
+import org.gradle.api.model.ObjectFactory;
 
 public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
+
+    private static final String GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY = MagicTractorSettingsPlugin.class.getPackageName() + "settings";
 
     private static final String MAGIC_TRACTOR_VERSION_CATALOG = "/gradle/magictractor.versions.toml";
     private static final Map<String, String> ZIP_FILE_SYSTEM_OPTIONS = Map.of("create", "true");
 
+    @Inject
+    protected abstract ObjectFactory getObjectFactory();
+
+    @Inject
+    protected abstract Supplier<DependencyResolutionServices> getDependencyResolutionServicesSupplier();
+
+    // Makes the settings available to project Plugins and Extensions.
+    // Specifically, it is used to allow version catalog settings to be inspected without resorting to reflection.
+    public static Settings getSettings(Gradle gradle) {
+        return getGradleExtraProperty(gradle, GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY);
+    }
+
+    private static <T> T getGradleExtraProperty(Gradle gradle, String propertyKey) {
+        @SuppressWarnings("unchecked")
+        T propertyValue = (T) gradle.getExtensions().getExtraProperties().get(propertyKey);
+        if (propertyKey == null) {
+            // TODO! verify the syntax of the workaround ("this" is dubious")
+            // TODO! pass the "this" part as a param to this method
+            throw new IllegalStateException("Property not found. Either use " + MagicTractorSettingsPlugin.class.getSimpleName() +
+                    " or workaround by explicitly setting the property value in your settings file gradle.ext[\"" +
+                    propertyKey + "\"=this");
+        }
+        return propertyValue;
+    }
+
+    // and static setter? setter could check whether the prop has already set explicitly?
+
     @Override
     public void apply(Settings settings) {
+        settings.getGradle().getExtensions().getExtraProperties().set(GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY, settings);
+
         URL url = getClass().getResource("/magictractor-settings-plugin.settings.gradle.kts");
         settings.apply(act -> act.from(url));
 
+        // This plugin provides a version catalog for libs that are used in most projects
+        // for logging, testing etc.
+        configurePluginVersionCatalog(settings);
+
+        // Looks for .toml files in the project. Not mandatory.
+        configureProjectVersionCatalog(settings);
+
+        // A Map of reconciled version catalogs is created
+        // in MagicTractorPlugin where the Java language version
+        // is known and can be used to adjust dependencies used.
+        // See ReconciledLibrariesBuilder.
+    }
+
+    private void configurePluginVersionCatalog(Settings settings) {
         settings.getDependencyResolutionManagement().getVersionCatalogs().create("libs", builder -> parseVersionCatalog(builder));
+    }
+
+    private void configureProjectVersionCatalog(Settings settings) {
+        // TODO! look to optional .toml file
     }
 
     private void parseVersionCatalog(VersionCatalogBuilder builder) {

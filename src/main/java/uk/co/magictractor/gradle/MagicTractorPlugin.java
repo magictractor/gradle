@@ -15,9 +15,13 @@
  */
 package uk.co.magictractor.gradle;
 
+import java.util.Map;
+
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
+import org.gradle.api.artifacts.VersionCatalogsExtension;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
@@ -30,6 +34,9 @@ import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
+
+import uk.co.magictractor.gradle.accessors.MapAccessor_Template;
+import uk.co.magictractor.gradle.libs.ReconciledLibrariesBuilder;
 
 /**
  * <p>
@@ -55,6 +62,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
+        // System.out.println("Settings[p]: " + MagicTractorSettingsPlugin.getSettings(project.getGradle()));
+
         MagicTractorExtension mte = project.getExtensions()
                 .create("magictractor", DefaultMagicTractorExtension.class);
 
@@ -64,6 +73,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
         configureJavaPluginExtension(mte);
         configureJavaCompileTasks(mte);
         configureTestTasks(mte);
+        configureReconciledLibraries(mte);
         configureDefaultDependencies(mte);
         configurePublishingExtension(mte);
     }
@@ -122,6 +132,98 @@ public class MagicTractorPlugin implements Plugin<Project> {
         repositories.mavenCentral();
         // Local maven used for other magictractor projects.
         repositories.mavenLocal();
+    }
+
+    private void configureReconciledLibraries(MagicTractorExtension mte) {
+        MinimalExternalModuleDependency dep;
+        //dep.ver
+
+        // org.gradle.api.internal.catalog.DefaultVersionCatalogBuilder_Decorated@3fe743b
+        // org.gradle.internal.extensibility.DefaultExtraPropertiesExtension@3e29172d  DefaultExtraPropertiesExtension
+        mte.getProject().getExtensions().configure(Object.class, ext -> {
+            System.out.println(ext + "  " + ext.getClass().getSimpleName());
+        });
+        mte.getProject().getAllTasks(true).entrySet().forEach(entry -> {
+            System.out.println(entry.getKey() + " -> " + entry.getValue().getClass().getSimpleName());
+        });
+
+        //  implementation(libs3) expected to fail, but exception is interesting
+        //  ah - it's simple - Map is for one dependency, should have keys "group", "name" and "version" (has none of those")
+        // visitor.candidate("Maps").example("[group: 'org.gradle', name: 'gradle-core', version: '1.0']");
+        //
+        //        * What went wrong:
+        //            Could not create an instance of type org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency.
+        //            > Multiple constructors for parameters [null, null, null]:
+        //                1. candidate: DefaultExternalModuleDependency(String, String, String)
+        //                2. best match: DefaultExternalModuleDependency(ModuleIdentifier, MutableVersionConstraint, String)
+        //
+        //        org.gradle.api.reflect.ObjectInstantiationException: Could not create an instance of type org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency.
+        //        at org.gradle.internal.instantiation.generator.DependencyInjectingInstantiator.doCreate(DependencyInjectingInstantiator.java:67)
+        //        at org.gradle.internal.instantiation.generator.DependencyInjectingInstantiator.newInstance(DependencyInjectingInstantiator.java:53)
+        //        at org.gradle.api.internal.notations.DependencyMapNotationConverter.parseMap(DependencyMapNotationConverter.java:76)
+        //        at org.gradle.internal.typeconversion.MapNotationConverter.parseType(MapNotationConverter.java:94)
+        //        at org.gradle.internal.typeconversion.MapNotationConverter.parseType(MapNotationConverter.java:41)
+        //        at org.gradle.internal.typeconversion.TypedNotationConverter.convert(TypedNotationConverter.java:43)
+        //        at org.gradle.internal.typeconversion.CompositeNotationConverter.convert(CompositeNotationConverter.java:34)
+        //        at org.gradle.internal.typeconversion.NotationConverterToNotationParserAdapter.parseNotation(NotationConverterToNotationParserAdapter.java:31)
+        //        at org.gradle.internal.typeconversion.ErrorHandlingNotationParser.parseNotation(ErrorHandlingNotationParser.java:48)
+        //        at org.gradle.api.internal.artifacts.DefaultDependencyFactory.createDependency(DefaultDependencyFactory.java:77)
+        //        at org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyHandler.create(DefaultDependencyHandler.java:166)
+        //        at org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyHandler.doAddRegularDependency(DefaultDependencyHandler.java:195)
+        //        at org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyHandler.doAdd(DefaultDependencyHandler.java:190)
+        //        at org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyHandler.add(DefaultDependencyHandler.java:118)
+        //        at org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyHandler.add(DefaultDependencyHandler.java:112)
+        //        at org.gradle.kotlin.dsl.support.delegates.DependencyHandlerDelegate.add(DependencyHandlerDelegate.kt:54)
+        //        at org.gradle.kotlin.dsl.ImplementationConfigurationAccessorsKt.implementation(Unknown Source)
+        //        at Util_gradle._init_$lambda$0(util.gradle.kts:35)
+        //        at org.gradle.kotlin.dsl.ProjectExtensionsKt.dependencies(ProjectExtensions.kt:167)
+
+        // Cannot remove extensions
+        //mte.getProject().getExtensions();
+
+        Map<String, String> libs3 = Map.of("template", "org.unbescape:unbescape:1.1.6.RELEASE", "ook", "ook:ook:1.2.3");
+        mte.getProject().getExtensions().add("libs3", libs3);
+        System.out.println("libs3: " + mte.getProject().getExtensions().getByName("libs3"));
+
+        //MapAccessor_Template accessor = new MapAccessor_Template("accessor", libs3);
+        //mte.getProject().getExtensions().add("accessor", accessor);
+
+        Map<String, Provider<? extends Dependency>> reconciledLibs = new ReconciledLibrariesBuilder().build(mte.getProject());
+        MapAccessor_Template reconciledAccessor = new MapAccessor_Template(reconciledLibs);
+        mte.getProject().getExtensions().add("reconciled", reconciledAccessor);
+
+        // aah... can this be used to pass javaVersion to settings??
+        //mte.getProject().getGradle().beforeSettings(null);
+
+        // Could not set unknown property 'libs4' for root project 'magictractor-util' of type org.gradle.api.Project.
+        // Object map = Map.of("hibernate", "ook:ook:1.2.3");
+        // mte.getProject().setProperty("libs4", map);
+
+        // see LibrariesSourceGenerator
+        // writeSingleVersionAccessor creates a method that delegates to getVersion()
+        // could write the generated code for easy inspection...
+
+        // Object versionCatalogs = mte.getProject().getExtensions().getByName("versionCatalogs");
+        // DefaultVersionCatalogsExtension
+        // System.out.println("versionCatalogs: " + versionCatalogs + "  " + versionCatalogs.getClass().getSimpleName());
+        VersionCatalogsExtension versionCatalogsExtension = mte.getProject().getExtensions().getByType(VersionCatalogsExtension.class);
+        System.out.println("getCatalogNames(): " + versionCatalogsExtension.getCatalogNames());
+
+        // ReconciledLibraries container = mte.getProject().getExtensions().create("container", DefaultReconciledLibraries.class);
+        // container.add(new ReconciledLibrary("hibernate"));
+        // still didn't find it...
+
+        // System.out.println("container.size: " + container.size());
+        // System.out.println("container: " + container + "  " + container.getClass());
+
+        Object libs = mte.getProject().getExtensions().getByName("libs");
+        System.out.println("libs: " + libs + "  " + libs.getClass());
+
+        // https://www.linen.dev/s/gradle-community/t/18470829/would-it-be-possible-to-generate-accessors-extensions-in-a-d
+        // "create an project extension extending a DomainCollection"
+
+        // VersionCatalogBuilder ook = (VersionCatalogBuilder) mte.getProject().getExtensions().getByName("ook");
+        //ook.library("hibernate", "ook:ook:1.2.3");
     }
 
     /**

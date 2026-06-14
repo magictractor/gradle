@@ -74,6 +74,7 @@ java {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    //jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
 }
 
 // https://docs.gradle.org/current/userguide/building_java_projects.html
