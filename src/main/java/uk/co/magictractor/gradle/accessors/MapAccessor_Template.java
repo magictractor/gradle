@@ -19,8 +19,8 @@ import java.util.Map;
 
 /**
  * <p>
- * This class serves as a template for dynamically generated accessors that
- * allow Kotlin scripts to use syntax like {@code libs.hibernate} rather than
+ * This class serves as a template for generated accessor classes that allow
+ * Kotlin scripts to use syntax like {@code libs.hibernate} rather than
  * {@libs.get("hibernate")}.
  * </p>
  * <p>

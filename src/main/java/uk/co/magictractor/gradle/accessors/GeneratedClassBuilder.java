@@ -36,10 +36,11 @@ import org.gradle.api.UncheckedIOException;
 import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
 
 /**
- * Intention is to be able to dynamically add accessors either directly to a
- * class or to a new class containing the accessors.
+ * Builder that copies a given class, transforms it using
+ * {@code ClassFile.transformClass()} and loads the new class via a custom
+ * {@code ClassLoader}.
  */
-public final class DynamicAccessorBuilder<T> {
+public final class GeneratedClassBuilder<T> {
 
     private final AccessorClassLoader ACCESSOR_CLASS_LOADER = new AccessorClassLoader();
 
@@ -62,10 +63,10 @@ public final class DynamicAccessorBuilder<T> {
     //private Boolean createNewAccessorClass;
 
     // temp for viewing bytecode
-    public DynamicAccessorBuilder() {
+    public GeneratedClassBuilder() {
     }
 
-    public DynamicAccessorBuilder(Class<T> accessorsForClass) {
+    public GeneratedClassBuilder(Class<T> accessorsForClass) {
         this.accessorsForClass = accessorsForClass;
 
         String classResourceName = "/" + accessorsForClass.getName().replace('.', '/') + ".class";
@@ -104,7 +105,7 @@ public final class DynamicAccessorBuilder<T> {
         }
     }
 
-    public DynamicAccessorBuilder withAccessorsFor(T accessorsForInstance) {
+    public GeneratedClassBuilder withAccessorsFor(T accessorsForInstance) {
         if (this.accessorsForInstance != null) {
             throw new IllegalStateException();
         }

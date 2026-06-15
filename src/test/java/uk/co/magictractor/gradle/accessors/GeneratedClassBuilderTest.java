@@ -19,17 +19,11 @@ import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 
-public class DynamicAccessorBuilderTest {
+public class GeneratedClassBuilderTest {
 
     @Test
     public void t() {
         Project project = ProjectBuilder.builder().build();
-        //        DefaultReconciledLibraries libs = project.getExtensions().create("libs", DefaultReconciledLibraries.class);
-        //        //Function<String, ReconciledLibrary> getter = AccessorUtil.getterForNamedCollection(libs);
-        //
-        //        Object built = new DynamicAccessorBuilder(DefaultReconciledLibraries.class)
-        //                .withAccessorsFor(libs)
-        //                .build();
     }
 
 }
