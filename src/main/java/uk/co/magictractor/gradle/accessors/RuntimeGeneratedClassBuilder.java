@@ -40,7 +40,7 @@ import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
  * {@code ClassFile.transformClass()} and loads the new class via a custom
  * {@code ClassLoader}.
  */
-public final class GeneratedClassBuilder<T> {
+public final class RuntimeGeneratedClassBuilder<T> {
 
     private final AccessorClassLoader ACCESSOR_CLASS_LOADER = new AccessorClassLoader();
 
@@ -63,10 +63,10 @@ public final class GeneratedClassBuilder<T> {
     //private Boolean createNewAccessorClass;
 
     // temp for viewing bytecode
-    public GeneratedClassBuilder() {
+    public RuntimeGeneratedClassBuilder() {
     }
 
-    public GeneratedClassBuilder(Class<T> accessorsForClass) {
+    public RuntimeGeneratedClassBuilder(Class<T> accessorsForClass) {
         this.accessorsForClass = accessorsForClass;
 
         String classResourceName = "/" + accessorsForClass.getName().replace('.', '/') + ".class";
@@ -105,7 +105,7 @@ public final class GeneratedClassBuilder<T> {
         }
     }
 
-    public GeneratedClassBuilder withAccessorsFor(T accessorsForInstance) {
+    public RuntimeGeneratedClassBuilder withAccessorsFor(T accessorsForInstance) {
         if (this.accessorsForInstance != null) {
             throw new IllegalStateException();
         }

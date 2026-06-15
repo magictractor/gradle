@@ -19,11 +19,12 @@ import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 
-public class GeneratedClassBuilderTest {
+public class RuntimeGeneratedClassBuilderTest {
 
     @Test
     public void t() {
         Project project = ProjectBuilder.builder().build();
+        new RuntimeGeneratedClassBuilder<>();
     }
 
 }
