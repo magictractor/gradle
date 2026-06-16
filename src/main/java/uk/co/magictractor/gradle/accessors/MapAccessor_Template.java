@@ -35,13 +35,12 @@ public class MapAccessor_Template {
     }
 
     public Object getTemplate() {
-        return get("mockito");
+        return get("template");
     }
 
     // Once everything is robust, this method could be removed
     public Object get(String libraryAlias) {
-        //return map.get("template");
-        Object value = map.get("mockito");
+        Object value = map.get(libraryAlias);
         if (value == null) {
             // If this is to be retained long-term, then the keys could be sorted
             throw new IllegalStateException("No library with alias \"" + libraryAlias + "\", the available aliases are " + map.keySet());

@@ -15,16 +15,60 @@
  */
 package uk.co.magictractor.gradle.accessors;
 
-import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.Map;
+
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class RuntimeGeneratedClassBuilderTest {
 
+    private static final String TEMPLATE_VALUE = "example.org:template:1.2.3";
+
+    private static final Map<String, String> MAP = Map.of("template", TEMPLATE_VALUE);
+
     @Test
-    public void t() {
-        Project project = ProjectBuilder.builder().build();
-        new RuntimeGeneratedClassBuilder<>();
+    public void t() throws Exception {
+        // Class<?> templateClass = TestCase_Template.class;
+        Class<?> templateClass = MapAccessor_Template.class;
+
+        RuntimeGeneratedClassBuilder builder = new RuntimeGeneratedClassBuilder(templateClass);
+
+        // TODO! also provide buildBytes() and buildInstance()?
+        Class<?> generatedClass = builder.buildClass();
+
+        assertThat(generatedClass.getName()).isEqualTo("uk.co.magictractor.Play");
+
+        Object instance = createInstance(generatedClass, MAP);
+        //Object instance = createInstance(generatedClass);
+        String actual = reflectiveGet(instance, "getTemplate");
+        assertThat(actual).isEqualTo(TEMPLATE_VALUE);
+    }
+
+    private <T> T createInstance(Class<T> generatedClass, Map<?, ?> map) throws ReflectiveOperationException {
+        return createInstance(generatedClass, new Object[] { map }, new Class<?>[] { Map.class });
+    }
+
+    private <T> T createInstance(Class<T> generatedClass, Object... params) throws ReflectiveOperationException {
+        Class<?>[] paramTypes = new Class[params.length];
+        for (int i = 0; i < params.length; i++) {
+            paramTypes[i] = params[i].getClass();
+        }
+
+        return createInstance(generatedClass, params, paramTypes);
+    }
+
+    private <T> T createInstance(Class<T> generatedClass, Object[] params, Class<?>[] paramTypes) throws ReflectiveOperationException {
+        Constructor<T> constructor = generatedClass.getConstructor(paramTypes);
+        return constructor.newInstance(params);
+    }
+
+    private <T> T reflectiveGet(Object object, String getterName) throws ReflectiveOperationException {
+        Method getter = object.getClass().getMethod(getterName);
+        return (T) getter.invoke(object);
     }
 
 }

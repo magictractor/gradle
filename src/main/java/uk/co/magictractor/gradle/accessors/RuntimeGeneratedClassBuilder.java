@@ -15,24 +15,30 @@
  */
 package uk.co.magictractor.gradle.accessors;
 
-import static java.lang.classfile.ClassFile.ACC_PUBLIC;
-import static java.lang.constant.ConstantDescs.CD_void;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
-import java.lang.classfile.ClassFile.LineNumbersOption;
+import java.lang.classfile.ClassFile.ConstantPoolSharingOption;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.CodeElement;
+import java.lang.classfile.CodeModel;
+import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
 import java.lang.classfile.MethodModel;
+import java.lang.classfile.attribute.SourceFileAttribute;
+import java.lang.classfile.constantpool.ClassEntry;
+import java.lang.classfile.constantpool.ConstantPoolBuilder;
+import java.lang.classfile.constantpool.FieldRefEntry;
+import java.lang.classfile.constantpool.Utf8Entry;
+import java.lang.classfile.instruction.FieldInstruction;
+import java.lang.classfile.instruction.InvokeInstruction;
+import java.lang.classfile.instruction.LocalVariable;
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
-import java.util.List;
-import java.util.function.Function;
 
-import org.gradle.api.UncheckedIOException;
 import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
 
 /**
@@ -40,135 +46,183 @@ import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
  * {@code ClassFile.transformClass()} and loads the new class via a custom
  * {@code ClassLoader}.
  */
-public final class RuntimeGeneratedClassBuilder<T> {
+public final class RuntimeGeneratedClassBuilder {
 
     private final AccessorClassLoader ACCESSOR_CLASS_LOADER = new AccessorClassLoader();
 
-    private ClassModel templateClassModel;
+    private Class<?> templateClass;
+    private String generatedClassName = "uk.co.magictractor.Play";
 
-    // TODO! restore final
-    //private final Class<T> accessorsForClass;
-    private Class<T> accessorsForClass;
-    private T accessorsForInstance;
-    private String accessorsClassName = "uk.co.magictractor.Play";
-    private byte[] templateClassBytes;
+    // User defined using withXxx() methods.
+    private String templateClassType;
+    //private String generatedClassType;
 
-    /**
-     * If {@code false} then accessors are to be added directly to an existing
-     * class. Expected to be non-null when {@code build()} is called depending
-     * on the methods called.
-     */
-    // Looks like it will have to be a new Class, unless I can persuade to custom ClassLoader
-    // to change the Class. It think ByteBuddy/ASM or something was able to modify existing classes?
-    //private Boolean createNewAccessorClass;
+    // Created when building. These might get moved to a context (or something)?
+    private transient ClassDesc _generatedClassDesc;
+    // ClassEntry describes an entry in the constant pool.
+    // Instructions using the templateClassEntry need to be changed to use the generatedClassEntry.
+    private transient ClassEntry _generatedClassEntry;
+    private transient ClassDesc _templateClassDesc;
+    private transient ClassEntry _templateClassEntry;
 
-    // temp for viewing bytecode
-    public RuntimeGeneratedClassBuilder() {
+    public RuntimeGeneratedClassBuilder(Class<?> templateClass) {
+        this.templateClass = templateClass;
     }
 
-    public RuntimeGeneratedClassBuilder(Class<T> accessorsForClass) {
-        this.accessorsForClass = accessorsForClass;
-
-        String classResourceName = "/" + accessorsForClass.getName().replace('.', '/') + ".class";
-        try (InputStream in = accessorsForClass.getResourceAsStream(classResourceName)) {
-            //if (in == null) {
-            //    throw new IllegalStateException("Class resource not found: " + classResourceName);
-            //}
-
-            //ByteSource.
-            byte[] templateClassBytes = ByteStreams.toByteArray(in);
-            // TODO! other options might be useful too
-            templateClassModel = ClassFile.of(LineNumbersOption.DROP_LINE_NUMBERS).parse(templateClassBytes);
+    public Class<?> buildClass() {
+        try {
+            return buildClass0();
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-
-        List<MethodModel> templateMethods = templateClassModel.methods()
-                .stream()
-                // maybe an annotation? pass in a Predicate?
-                .filter(mm -> mm.methodName().stringValue().startsWith("__"))
-                .toList();
-
-        // TODO! want the line numbers now?
-        // Different options here, keep the line numbers this time.
-        ClassFile.of().transformClass(templateClassModel, this::transformTemplateClass);
+        catch (ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    private void transformTemplateClass(ClassBuilder builder, ClassElement element) {
-        // TODO! MethodElement match - as above
-        if (element instanceof MethodElement && ((MethodElement) element) == null) {
-            // TODO! insert substitutions instead
+    // Transforms required:
+    //
+    // Change class name (inc package)
+    //   how?? see ClassModel.thisClass()
+    //
+    // Change constants in code
+    //   LoadConstant[OP=LDC, val=mockito]
+    //
+    // Change method name
+    //   MethodModel[methodName=getTemplate, methodType=()Ljava/lang/Object;, flags=1]
+    //
+    // Maybe add synthetic flag to class and generated methods
+    //  MethodModel[methodName=get, methodType=(Ljava/lang/String;)Ljava/lang/Object;, flags=1]
+    //
+    // Add marker interface with const that points to docs. (configurable)
+    //   Interfaces[interfaces=]
+    //
+    // Write info to writer (similar to initial printlns)
+    // Add java version for ClassFileVersion[majorVersion=69, minorVersion=0]
+    // Add desc for AccessFlags[flags=33]
+    private Class<?> buildClass0() throws IOException, ClassNotFoundException {
+        // Don't want leading "L" or trailing semicolon. Those might be needed need to be added in some contexts.
+        templateClassType = templateClass.getName().replace('.', '/');
+        //generatedClassType = generatedClassName.replace('.', '/');
+
+        byte[] templateClassBytes = readTemplateClassBytes0();
+        //templateClassModel = ClassFile.of(LineNumbersOption.DROP_LINE_NUMBERS).parse(templateClassBytes);
+        // will want to drop line numbers in generated methods, but not the whole file?
+
+        // TODO! dropping debug should be optional. Some debug instructions (LocalVariable) should be fixed.
+        // ClassModel templateClassModel = ClassFile.of(DebugElementsOption.DROP_DEBUG).parse(templateClassBytes);
+        ClassModel templateClassModel = ClassFile.of().parse(templateClassBytes);
+        System.out.println(templateClassModel);
+
+        _templateClassDesc = ClassDesc.of(templateClass.getName());
+        _generatedClassDesc = ClassDesc.of(generatedClassName);
+
+        // TODO! NEW_POOL better?
+        // Note that transformClass() delegates to build(), that might enable more control,
+        // perhaps to prevent the template appearing in the constant pool
+        // or to set templateClassEntry once up front.
+        byte[] binaryRepresentation = ClassFile.of(ConstantPoolSharingOption.SHARED_POOL)
+                .transformClass(templateClassModel, _generatedClassDesc, this::transformTemplateClass0);
+
+        // temp - second pass to see what changed
+        //System.out.println("----------------------");
+        //ClassFile.of().transformClass(ClassFile.of().parse(binaryRepresentation), this::transformTemplateClass0);
+
+        return ACCESSOR_CLASS_LOADER.loadClass(generatedClassName, binaryRepresentation);
+    }
+
+    private byte[] readTemplateClassBytes0() throws IOException {
+        String classResourceName = "/" + templateClass.getName().replace('.', '/') + ".class";
+        try (InputStream in = templateClass.getResourceAsStream(classResourceName)) {
+            return ByteStreams.toByteArray(in);
+        }
+    }
+
+    private void transformTemplateClass0(ClassBuilder builder, ClassElement element) {
+        if (element instanceof SourceFileAttribute attr) {
+            System.out.println("  " + element + "  {sourceFile=" + attr.sourceFile() + "}");
+        }
+        else if (element instanceof java.lang.classfile.Attribute attr) {
+            System.out.println("  " + element + "  (" + attr.getClass().getSimpleName() + ")");
+        }
+        else {
+            System.out.println("  " + element);
+        }
+
+        if (element instanceof MethodModel mm) {
+            builder.withMethod(mm.methodName(), mm.methodType(), mm.flags().flagsMask(), mb -> {
+                for (MethodElement me : mm) {
+                    transformTemplateMethod0(mb, me);
+                }
+            });
         }
         else {
             builder.with(element);
         }
     }
 
-    public RuntimeGeneratedClassBuilder withAccessorsFor(T accessorsForInstance) {
-        if (this.accessorsForInstance != null) {
-            throw new IllegalStateException();
+    private void transformTemplateMethod0(MethodBuilder builder, MethodElement element) {
+        System.out.println("    " + element);
+
+        if (element instanceof CodeModel cm) {
+            builder.withCode(cb -> {
+                for (CodeElement ce : cm) {
+                    transformTemplateCode0(cb, ce);
+                }
+            });
         }
-
-        this.accessorsForInstance = accessorsForInstance;
-        return this;
-    }
-
-    // https://blog.rasc.ch/2026/03/classfileapi.html
-    public Object build() {
-
-        ClassDesc classWithAccessors = ClassDesc.of(accessorsClassName);
-
-        // byte[] bytes = ClassFile.of(classWithAccessors)
-        // java.lan
-
-        byte[] binaryRepresentation = ClassFile.of().build(classWithAccessors, this::buildClass);
-
-        // getClass().getClassLoader().define
-
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-
-        try {
-            Class<?> accessorClass = ACCESSOR_CLASS_LOADER.loadClass(accessorsClassName, binaryRepresentation);
-            return accessorClass.getConstructor().newInstance();
-        }
-        catch (ClassNotFoundException e) {
-            throw new IllegalStateException(e);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
+        else {
+            builder.with(element);
         }
     }
 
-    //    // access flags 0x1
-    //    public <init>()V
-    //     L0
-    //      LINENUMBER 36 L0
-    //      ALOAD 0
-    //      INVOKESPECIAL java/lang/Object.<init>()V
-    //      RETURN
-    //     L1
-    //      LOCALVARIABLE this Lorg/apache/batik/ext/awt/image/codec/imageio/ImageIODebugUtil; L0 L1 0
-    //      MAXSTACK = 1
-    //      MAXLOCALS = 1
-    private void buildClass(ClassBuilder classBuilder) {
-        classBuilder.withFlags(ACC_PUBLIC);
-        classBuilder.withMethodBody("<init>", MethodTypeDesc.of(CD_void), ACC_PUBLIC, codeBuilder -> {
-            codeBuilder
-                    .aload(0)
-                    .invokespecial(ClassDesc.of(Object.class.getName()), "<init>", MethodTypeDesc.of(CD_void))
-                    .return_();
-        });
+    private void transformTemplateCode0(CodeBuilder builder, CodeElement element) {
+        String indent = "      ";
+        String indentPlus = indent + "  > ";
+        System.out.println(indent + element);
+
+        if (element instanceof FieldInstruction fi) {
+            if (isTemplate(fi.field().owner(), builder)) {
+                FieldRefEntry f = builder.constantPool().fieldRefEntry(_generatedClassDesc, fi.name().stringValue(), fi.typeSymbol());
+                element = FieldInstruction.of(fi.opcode(), _generatedClassEntry, fi.name(), fi.type());
+                System.out.println(indentPlus + element);
+            }
+        }
+        else if (element instanceof InvokeInstruction ii) {
+            if (isTemplate(ii.owner(), builder)) {
+                element = InvokeInstruction.of(ii.opcode(), _generatedClassEntry, ii.name(), ii.type(), false);
+                System.out.println(indentPlus + element);
+            }
+        }
+        else if (element instanceof LocalVariable lv) {
+            // Check type too in case the code is run again to display the class post-translation.
+            // type() has leading "L" and trailing semicolon.
+            if (lv.name().equalsString("this") && lv.typeSymbol().equals(_templateClassDesc)) {
+                ensureGeneratedClassEntry(builder);
+                element = LocalVariable.of(lv.slot(), "this", _generatedClassDesc, lv.startScope(), lv.endScope());
+                System.out.println(indentPlus + element);
+            }
+        }
+
+        builder.with(element);
+        // and maybe  Attribute[name=SourceFile]  {sourceFile=MapAccessor_Template.java}
     }
 
-    /**
-     * Creates an accessor method an adds it to the given class.
-     */
-    public static <T, ACCESSOR> void addAccessorMethod(String name, Class<T> clazz, Class<ACCESSOR> accessorType, Function<String, ACCESSOR> accessorFunction) {
-        String capitalisedName = Character.toUpperCase(name.charAt(0)) + name.substring(1);
-        String methodName = "get" + capitalisedName;
+    private boolean isTemplate(ClassEntry classEntry, CodeBuilder builder) {
+        if (_templateClassEntry == null) {
+            ConstantPoolBuilder constantPoolBuilder = builder.constantPool();
+            Utf8Entry utf8 = constantPoolBuilder.utf8Entry(templateClassType);
+            _templateClassEntry = constantPoolBuilder.classEntry(utf8);
+            _generatedClassEntry = builder.constantPool().classEntry(_generatedClassDesc);
+        }
+        return classEntry == _templateClassEntry;
+    }
 
-        MethodTypeDesc d = MethodTypeDesc.of(ClassDesc.of(accessorType.getName()));
+    private void ensureGeneratedClassEntry(CodeBuilder builder) {
+        if (_generatedClassEntry == null) {
+            _generatedClassEntry = builder.constantPool().classEntry(_generatedClassDesc);
+        }
     }
 
 }
