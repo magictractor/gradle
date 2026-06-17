@@ -22,6 +22,7 @@ import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFile.ConstantPoolSharingOption;
+import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
@@ -33,12 +34,14 @@ import java.lang.classfile.attribute.SourceFileAttribute;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.constantpool.ConstantPoolBuilder;
 import java.lang.classfile.constantpool.FieldRefEntry;
+import java.lang.classfile.constantpool.PoolEntry;
 import java.lang.classfile.constantpool.Utf8Entry;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.classfile.instruction.LocalVariable;
 import java.lang.constant.ClassDesc;
 
+import org.gradle.internal.impldep.com.google.common.base.Strings;
 import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
 
 /**
@@ -83,9 +86,6 @@ public final class RuntimeGeneratedClassBuilder {
 
     // Transforms required:
     //
-    // Change class name (inc package)
-    //   how?? see ClassModel.thisClass()
-    //
     // Change constants in code
     //   LoadConstant[OP=LDC, val=mockito]
     //
@@ -110,24 +110,79 @@ public final class RuntimeGeneratedClassBuilder {
         //templateClassModel = ClassFile.of(LineNumbersOption.DROP_LINE_NUMBERS).parse(templateClassBytes);
         // will want to drop line numbers in generated methods, but not the whole file?
 
-        // TODO! dropping debug should be optional. Some debug instructions (LocalVariable) should be fixed.
-        // ClassModel templateClassModel = ClassFile.of(DebugElementsOption.DROP_DEBUG).parse(templateClassBytes);
+        // ClassModel is sealed, so cannot wrap it for shennanigans
+        // ConstantPoolBuilder is sealed too...
         ClassModel templateClassModel = ClassFile.of().parse(templateClassBytes);
-        System.out.println(templateClassModel);
 
         _templateClassDesc = ClassDesc.of(templateClass.getName());
         _generatedClassDesc = ClassDesc.of(generatedClassName);
+
+        dump(templateClassModel);
+        System.out.println();
+
+        // transformClass() does not include the ClassModel, instead iterating over its elements
+        System.out.println(templateClassModel);
 
         // TODO! NEW_POOL better?
         // Note that transformClass() delegates to build(), that might enable more control,
         // perhaps to prevent the template appearing in the constant pool
         // or to set templateClassEntry once up front.
-        byte[] binaryRepresentation = ClassFile.of(ConstantPoolSharingOption.SHARED_POOL)
+        //
+        // OR there are many methods on ClassTransform that could be overridden... and builder is using ClassTransform anyway...
+        //
+        // OR ClassRemapper? Looks to heavyweight for this case.
+        byte[] binaryRepresentation = ClassFile.of(ConstantPoolSharingOption.NEW_POOL)
                 .transformClass(templateClassModel, _generatedClassDesc, this::transformTemplateClass0);
+        //                .transformClass(templateClassModel, _generatedClassDesc, new ClassTransform() {
+        //                    @Override
+        //                    public void accept(ClassBuilder builder, ClassElement element) {
+        //                        transformTemplateClass0(builder, element);
+        //                        //this.con
+        //                    }
+        //                });
 
-        // temp - second pass to see what changed
-        //System.out.println("----------------------");
-        //ClassFile.of().transformClass(ClassFile.of().parse(binaryRepresentation), this::transformTemplateClass0);
+        //        default byte[] transformClass(ClassModel model, ClassDesc newClassName, ClassTransform transform) {
+        //            return transformClass(model, TemporaryConstantPool.INSTANCE.classEntry(newClassName), transform);
+        //        }
+
+        //        @Override
+        //        public byte[] transformClass(ClassModel model, ClassEntry newClassName, ClassTransform transform) {
+        //            ConstantPoolBuilder constantPool = sharedConstantPool() ? ConstantPoolBuilder.of(model)
+        //                                                                    : ConstantPoolBuilder.of();
+        //            return build(newClassName, constantPool,
+        //                    new Consumer<ClassBuilder>() {
+        //                        @Override
+        //                        public void accept(ClassBuilder builder) {
+        //                            ((DirectClassBuilder) builder).setOriginal((ClassImpl)model);
+        //                            ((DirectClassBuilder) builder).setSizeHint(((ClassImpl)model).classfileLength());
+        //                            builder.transform((ClassImpl)model, transform);
+        //                        }
+        //                    });
+        //        }
+
+        //        default byte[] build(ClassDesc thisClass,
+        //                Consumer<? super ClassBuilder> handler) {
+        //ConstantPoolBuilder pool = ConstantPoolBuilder.of();
+        //return build(pool.classEntry(thisClass), pool, handler);
+        //}
+        // Takes ClassBuilder rather than ClassTransform, uses a new Pool
+        //ClassFile.of().build(_generatedClassDesc, this::blah);
+
+        // Not using ClassFile.transformClass() because we also want to transform "this" in the constant pool.
+        // It seems strange that transformClass() so not do so.
+        // transformClass() also delegates to build().
+        // This also MORE...
+
+        // temp - check that a second pass compresses the constant pool, removing references to the template.
+        // looks OK - create a unit test to verify and make second pass configurable
+        // second pass would not need a transform, just a new ConstantPool.
+        ClassModel secondPassModel = ClassFile.of().parse(binaryRepresentation);
+        //binaryRepresentation = ClassFile.of(ConstantPoolSharingOption.NEW_POOL)
+        //        .transformClass(secondPassModel, _generatedClassDesc, this::transformTemplateClass0);
+
+        // temp - see what changed
+        System.out.println("----------------------");
+        dump(ClassFile.of().parse(binaryRepresentation));
 
         return ACCESSOR_CLASS_LOADER.loadClass(generatedClassName, binaryRepresentation);
     }
@@ -205,6 +260,11 @@ public final class RuntimeGeneratedClassBuilder {
             }
         }
 
+        // TEMP
+        if (element.toString().contains("_Template")) {
+            throw new IllegalStateException("Code needs modification to transform " + element);
+        }
+
         builder.with(element);
         // and maybe  Attribute[name=SourceFile]  {sourceFile=MapAccessor_Template.java}
     }
@@ -216,12 +276,32 @@ public final class RuntimeGeneratedClassBuilder {
             _templateClassEntry = constantPoolBuilder.classEntry(utf8);
             _generatedClassEntry = builder.constantPool().classEntry(_generatedClassDesc);
         }
-        return classEntry == _templateClassEntry;
+        return classEntry.equals(_templateClassEntry);
     }
 
     private void ensureGeneratedClassEntry(CodeBuilder builder) {
         if (_generatedClassEntry == null) {
             _generatedClassEntry = builder.constantPool().classEntry(_generatedClassDesc);
+        }
+    }
+
+    // TEMP
+    private void dump(ClassModel classModel) {
+        for (PoolEntry poolEntry : classModel.constantPool()) {
+            // toStrings() for the pool are scruffy
+            System.out.println(poolEntry);
+        }
+        dump0(0, classModel);
+    }
+
+    private void dump0(int indentSize, ClassFileElement element) {
+        System.out.print(Strings.repeat("  ", indentSize));
+        System.out.println(element);
+        if (element instanceof Iterable) {
+            Iterable<? extends ClassFileElement> iterableElement = (Iterable<? extends ClassFileElement>) element;
+            for (ClassFileElement subElement : iterableElement) {
+                dump0(indentSize + 1, subElement);
+            }
         }
     }
 
