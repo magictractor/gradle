@@ -15,8 +15,6 @@
  */
 package uk.co.magictractor.gradle.accessors;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.ClassModel;
@@ -27,11 +25,10 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.gradle.internal.impldep.com.google.common.base.Strings;
-import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
 
 import uk.co.magictractor.gradle.classfile.ChangeClassVisitor;
-import uk.co.magictractor.gradle.classfile.ClassFileTraversal;
 import uk.co.magictractor.gradle.classfile.ClassFileElementVisitorList;
+import uk.co.magictractor.gradle.classfile.ClassFileTraversal;
 
 /**
  * Builder that copies a given class, transforms it using
@@ -96,7 +93,6 @@ public final class RuntimeGeneratedClassBuilder {
     }
 
     public byte[] buildBytes() {
-        byte[] templateClassBytes = readClassBytes(templateClass);
 
         ClassFileElementVisitorList visitorList = new ClassFileElementVisitorList();
 
@@ -104,10 +100,7 @@ public final class RuntimeGeneratedClassBuilder {
         ClassDesc generatedClassDesc = ClassDesc.of(generatedClassName);
         visitorList.add(new ChangeClassVisitor(templateClassDesc, generatedClassDesc));
 
-        ClassModel classModel = ClassFile.of().parse(templateClassBytes);
-        byte[] binaryRepresentation = ClassFile.of().transformClass(classModel, generatedClassDesc, (b, e) -> {
-            new ClassFileTraversal().visitClassElement(e, visitorList, b);
-        });
+        byte[] binaryRepresentation = new ClassFileTraversal().visitClass(templateClass, generatedClassDesc, visitorList);
 
         // temp - check that a second pass compresses the constant pool, removing references to the template.
         // looks OK - create a unit test to verify and make second pass configurable
@@ -121,17 +114,6 @@ public final class RuntimeGeneratedClassBuilder {
         //dump(ClassFile.of().parse(binaryRepresentation));
 
         return binaryRepresentation;
-    }
-
-    // could be moved to a static util
-    private byte[] readClassBytes(Class<?> clazz) {
-        String classResourceName = "/" + clazz.getName().replace('.', '/') + ".class";
-        try (InputStream in = clazz.getResourceAsStream(classResourceName)) {
-            return ByteStreams.toByteArray(in);
-        }
-        catch (IOException e) {
-            throw new IllegalArgumentException("No .class file found for " + clazz.getName());
-        }
     }
 
     // TEMP - create a DumpTransform (suggests Transform might not be the best name - we might just traverse)
