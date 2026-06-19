@@ -42,8 +42,20 @@ import java.lang.classfile.MethodElement;
 // Add desc for AccessFlags[flags=33]
 public interface ClassFileElementVisitor {
 
-    // Used to quickly find relevant transforms rather than looping through all for every element.
-    // hmm, acceptsElement() better? - probably want ChangeThis done in a single transform
+    /**
+     * <p>
+     * Returns a flag indicating whether this visitor should visit
+     * {@code ClassFileElement}s of the given type. If this returns false, then
+     * {@code ClassFileTraversal} will not call
+     * {@link #visitClassElement()},{@link #visitMethodElement(MethodElement,
+     * MethodBuilder()} or {@link #visitCodeElement()} with elements of the
+     * given type.
+     * </p>
+     * <p>
+     * This is used to find and cache short lists of applicable visitors rather
+     * than looping through all visitors for every element.
+     * </p>
+     */
     boolean acceptsElement(Class<? extends ClassFileElement> elementType);
 
     /**
