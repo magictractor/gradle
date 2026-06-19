@@ -13,22 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.accessors;
-
-import java.util.Map;
+package uk.co.magictractor.gradle.classfile;
 
 public class TestCase_Template {
 
-    private static final String T = "template";
+    public static final String CONSTANT = "template";
 
-    private final Map map;
+    private final String field = "template";
 
-    public TestCase_Template(Map map) {
-        this.map = map;
-    }
-
-    public String getTemplate() {
-        return T;
+    public Object getTemplate() {
+        return "template";
     }
 
 }

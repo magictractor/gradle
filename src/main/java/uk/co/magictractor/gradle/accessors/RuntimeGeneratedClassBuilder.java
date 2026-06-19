@@ -21,12 +21,14 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.constantpool.PoolEntry;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
 import org.gradle.internal.impldep.com.google.common.base.Strings;
 
 import uk.co.magictractor.gradle.classfile.ChangeClassVisitor;
+import uk.co.magictractor.gradle.classfile.ClassFileElementVisitor;
 import uk.co.magictractor.gradle.classfile.ClassFileElementVisitorList;
 import uk.co.magictractor.gradle.classfile.ClassFileTraversal;
 
@@ -39,11 +41,17 @@ public final class RuntimeGeneratedClassBuilder {
 
     private final AccessorClassLoader ACCESSOR_CLASS_LOADER = new AccessorClassLoader();
 
-    private Class<?> templateClass;
+    private final Class<?> templateClass;
     private String generatedClassName = "uk.co.magictractor.Play";
+    private List<ClassFileElementVisitor> visitors = new ArrayList<>();
 
     public RuntimeGeneratedClassBuilder(Class<?> templateClass) {
         this.templateClass = templateClass;
+    }
+
+    public RuntimeGeneratedClassBuilder withVisitor(ClassFileElementVisitor visitor) {
+        visitors.add(visitor);
+        return this;
     }
 
     public <T> T buildInstance(Object... constructorParameters) {
@@ -61,7 +69,7 @@ public final class RuntimeGeneratedClassBuilder {
             StringBuilder msgBuilder = new StringBuilder(64);
             msgBuilder.append("No public constructors have ");
             if (constructors.isEmpty()) {
-                msgBuilder.append(" no parameters.");
+                msgBuilder.append("no parameters.");
             }
             else {
                 msgBuilder.append(parameterCount);
@@ -98,9 +106,16 @@ public final class RuntimeGeneratedClassBuilder {
 
         ClassDesc templateClassDesc = ClassDesc.of(templateClass.getName());
         ClassDesc generatedClassDesc = ClassDesc.of(generatedClassName);
-        visitorList.add(new ChangeClassVisitor(templateClassDesc, generatedClassDesc));
+        ClassFileElementVisitor visitor = (new ChangeClassVisitor(templateClassDesc, generatedClassDesc));
 
-        byte[] binaryRepresentation = new ClassFileTraversal().visitClass(templateClass, generatedClassDesc, visitorList);
+        if (!visitors.isEmpty()) {
+            visitorList = new ClassFileElementVisitorList();
+            visitorList.add(visitor);
+            visitorList.addAll(visitors);
+            visitor = visitorList;
+        }
+
+        byte[] binaryRepresentation = new ClassFileTraversal().visitClass(templateClass, generatedClassDesc, visitor);
 
         // temp - check that a second pass compresses the constant pool, removing references to the template.
         // looks OK - create a unit test to verify and make second pass configurable

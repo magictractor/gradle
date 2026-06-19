@@ -21,6 +21,8 @@ import java.lang.classfile.ClassFileBuilder;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
+import java.lang.classfile.FieldBuilder;
+import java.lang.classfile.FieldElement;
 import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
 import java.util.ArrayList;
@@ -35,18 +37,32 @@ public class ClassFileElementVisitorList implements ClassFileElementVisitor {
     // No key means not checked, empty list for checked and has no visitors.
     private final Map<Class<? extends ClassFileElement>, List<ClassFileElementVisitor>> visitorsForElement = new HashMap<>();
 
-    public void add(ChangeClassVisitor visitor) {
+    public void add(ClassFileElementVisitor visitor) {
         visitors.add(visitor);
     }
 
+    public void addAll(List<ClassFileElementVisitor> visitors) {
+        this.visitors.addAll(visitors);
+    }
+
     @Override
-    public boolean acceptsElement(Class<? extends ClassFileElement> elementType) {
-        return getVisitorList(elementType).size() > 0;
+    public boolean acceptsElementType(Class<? extends ClassFileElement> elementType) {
+        for (ClassFileElementVisitor visitor : visitors) {
+            if (visitor.acceptsElementType(elementType)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public ClassElement visitClassElement(ClassElement element, ClassBuilder classBuilder) {
         return visit(element, (v, e) -> v.visitClassElement(e, classBuilder));
+    }
+
+    @Override
+    public FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
+        return visit(element, (v, e) -> v.visitFieldElement(e, fieldBuilder));
     }
 
     @Override
@@ -91,7 +107,7 @@ public class ClassFileElementVisitorList implements ClassFileElementVisitor {
     private List<ClassFileElementVisitor> getVisitorList(Class<? extends ClassFileElement> elementType) {
         List<ClassFileElementVisitor> result = visitorsForElement.get(elementType);
         if (result == null) {
-            result = visitors.stream().filter(t -> t.acceptsElement(elementType)).toList();
+            result = visitors.stream().filter(t -> t.acceptsElementType(elementType)).toList();
             visitorsForElement.put(elementType, result);
         }
         return result;

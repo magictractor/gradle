@@ -17,12 +17,13 @@ package uk.co.magictractor.gradle.accessors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.Method;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-public class RuntimeGeneratedClassBuilderTest {
+import uk.co.magictractor.gradle.classfile.AbstractClassFileElementVisitorTest;
+
+public class RuntimeGeneratedClassBuilderTest extends AbstractClassFileElementVisitorTest {
 
     private static final String TEMPLATE_VALUE = "example.org:template:1.2.3";
 
@@ -30,19 +31,10 @@ public class RuntimeGeneratedClassBuilderTest {
 
     @Test
     public void t() throws Exception {
-        // Class<?> templateClass = TestCase_Template.class;
-        Class<?> templateClass = MapAccessor_Template.class;
+        Object generated = new RuntimeGeneratedClassBuilder(MapAccessor_Template.class)
+                .buildInstance(MAP);
 
-        RuntimeGeneratedClassBuilder builder = new RuntimeGeneratedClassBuilder(templateClass);
-
-        Object generatedInstance = builder.buildInstance(MAP);
-
-        assertThat(generatedInstance.getClass().getName()).isEqualTo("uk.co.magictractor.Play");
-    }
-
-    private <T> T reflectiveGet(Object object, String getterName) throws ReflectiveOperationException {
-        Method getter = object.getClass().getMethod(getterName);
-        return (T) getter.invoke(object);
+        assertThat(generated.getClass().getName()).isEqualTo("uk.co.magictractor.Play");
     }
 
 }

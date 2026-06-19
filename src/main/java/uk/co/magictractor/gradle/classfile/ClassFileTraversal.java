@@ -22,6 +22,9 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.CodeModel;
+import java.lang.classfile.FieldBuilder;
+import java.lang.classfile.FieldElement;
+import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
 import java.lang.classfile.MethodModel;
@@ -41,26 +44,54 @@ public class ClassFileTraversal {
     }
 
     private void visitClassElement(ClassElement classElement, ClassFileElementVisitor visitor, ClassBuilder classBuilder) {
-        ClassElement transformedElement = visitor.visitClassElement(classElement, classBuilder);
-        if (transformedElement == null) {
-            return;
+        ClassElement transformedElement = classElement;
+        if (visitor.acceptsElementType(classElement.getClass())) {
+            transformedElement = visitor.visitClassElement(classElement, classBuilder);
+            if (transformedElement == null) {
+                return;
+            }
         }
-        else if (transformedElement instanceof MethodModel mm) {
+
+        if (transformedElement instanceof MethodModel mm) {
             classBuilder.transformMethod(mm, (b, e) -> {
                 visitMethodElement(e, visitor, b);
             });
+        }
+        else if (transformedElement instanceof FieldModel fm) {
+            classBuilder.transformField(fm, (b, e) -> {
+                visitFieldElement(e, visitor, b);
+            });
+        }
+        else if (transformedElement instanceof Iterable) {
+            throw new IllegalStateException("visitClassElement() should maybe handle Iterable element " + transformedElement.getClass().getName());
         }
         else {
             classBuilder.with(transformedElement);
         }
     }
 
-    public void visitMethodElement(MethodElement methodElement, ClassFileElementVisitor visitor, MethodBuilder methodBuilder) {
-        MethodElement transformedElement = visitor.visitMethodElement(methodElement, methodBuilder);
-        if (transformedElement == null) {
-            return;
+    public void visitFieldElement(FieldElement fieldElement, ClassFileElementVisitor visitor, FieldBuilder fieldBuilder) {
+        FieldElement transformedElement = fieldElement;
+        if (visitor.acceptsElementType(fieldElement.getClass())) {
+            transformedElement = visitor.visitFieldElement(fieldElement, fieldBuilder);
+            if (transformedElement == null) {
+                return;
+            }
         }
-        else if (methodElement instanceof CodeModel cm) {
+
+        fieldBuilder.with(transformedElement);
+    }
+
+    public void visitMethodElement(MethodElement methodElement, ClassFileElementVisitor visitor, MethodBuilder methodBuilder) {
+        MethodElement transformedElement = methodElement;
+        if (visitor.acceptsElementType(methodElement.getClass())) {
+            transformedElement = visitor.visitMethodElement(methodElement, methodBuilder);
+            if (transformedElement == null) {
+                return;
+            }
+        }
+
+        if (transformedElement instanceof CodeModel cm) {
             methodBuilder.transformCode(cm, (b, e) -> {
                 visitCodeElement(e, visitor, b);
             });
@@ -71,13 +102,15 @@ public class ClassFileTraversal {
     }
 
     private void visitCodeElement(CodeElement codeElement, ClassFileElementVisitor visitor, CodeBuilder codeBuilder) {
-        CodeElement transformedElement = visitor.visitCodeElement(codeElement, codeBuilder);
-        if (transformedElement == null) {
-            return;
+        CodeElement transformedElement = codeElement;
+        if (visitor.acceptsElementType(codeElement.getClass())) {
+            transformedElement = visitor.visitCodeElement(codeElement, codeBuilder);
+            if (transformedElement == null) {
+                return;
+            }
         }
-        else {
-            codeBuilder.with(transformedElement);
-        }
+
+        codeBuilder.with(transformedElement);
     }
 
 }

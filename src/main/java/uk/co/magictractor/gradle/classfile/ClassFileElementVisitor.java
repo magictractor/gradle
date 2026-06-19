@@ -20,13 +20,12 @@ import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
+import java.lang.classfile.FieldBuilder;
+import java.lang.classfile.FieldElement;
 import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
 
 // Transforms required:
-//
-// Change constants in code
-//   LoadConstant[OP=LDC, val=mockito]
 //
 // Change method name
 //   MethodModel[methodName=getTemplate, methodType=()Ljava/lang/Object;, flags=1]
@@ -56,7 +55,7 @@ public interface ClassFileElementVisitor {
      * than looping through all visitors for every element.
      * </p>
      */
-    boolean acceptsElement(Class<? extends ClassFileElement> elementType);
+    boolean acceptsElementType(Class<? extends ClassFileElement> elementType);
 
     /**
      * <p>
@@ -65,7 +64,7 @@ public interface ClassFileElementVisitor {
      * </p>
      * <p>
      * Returns a different instance if a change has been made to it and
-     * subsequent {@code ClassFileElementVisitor}s applied.
+     * subsequent {@code ClassFileElementVisitor}s should be applied.
      * </p>
      * <p>
      * Returns {@code null} if the {@code ClassElement} has already been handled
@@ -76,12 +75,28 @@ public interface ClassFileElementVisitor {
 
     /**
      * <p>
+     * Returns given {@code FieldElement} if it is to be passed through without
+     * modification and subsequent {@code ClassFileElementVisitor}s applied.
+     * </p>
+     * <p>
+     * Returns a different instance if a change has been made to it and
+     * subsequent {@code ClassFileElementVisitor}s should be applied.
+     * </p>
+     * <p>
+     * Returns {@code null} if the {@code FieldElement} has already been handled
+     * using {@link FieldBuilder#with()} or is to be discarded.
+     * </p>
+     */
+    FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder);
+
+    /**
+     * <p>
      * Returns given {@code MethodElement} if it is to be passed through without
      * modification and subsequent {@code ClassFileElementVisitor}s applied.
      * </p>
      * <p>
      * Returns a different instance if a change has been made to it and
-     * subsequent {@code ClassFileElementVisitor}s applied.
+     * subsequent {@code ClassFileElementVisitor}s should be applied.
      * </p>
      * <p>
      * Returns {@code null} if the {@code MethodElement} has already been
@@ -97,7 +112,7 @@ public interface ClassFileElementVisitor {
      * </p>
      * <p>
      * Returns a different instance if a change has been made to it and
-     * subsequent {@code ClassFileElementVisitor}s applied.
+     * subsequent {@code ClassFileElementVisitor}s should be applied.
      * </p>
      * <p>
      * Returns {@code null} if the {@code CodeElement} has already been handled

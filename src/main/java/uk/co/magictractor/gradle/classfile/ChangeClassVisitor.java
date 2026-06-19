@@ -21,6 +21,8 @@ import java.lang.classfile.ClassFileBuilder;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
+import java.lang.classfile.FieldBuilder;
+import java.lang.classfile.FieldElement;
 import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
 import java.lang.classfile.constantpool.ClassEntry;
@@ -46,7 +48,7 @@ public class ChangeClassVisitor implements ClassFileElementVisitor {
     }
 
     @Override
-    public boolean acceptsElement(Class<? extends ClassFileElement> elementType) {
+    public boolean acceptsElementType(Class<? extends ClassFileElement> elementType) {
         // There could be more we haven't encountered yet...
         return FieldInstruction.class.isAssignableFrom(elementType)
                 || InvokeInstruction.class.isAssignableFrom(elementType)
@@ -55,12 +57,17 @@ public class ChangeClassVisitor implements ClassFileElementVisitor {
 
     @Override
     public ClassElement visitClassElement(ClassElement element, ClassBuilder codeBuilder) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("visitClassElement() not expected for element of type " + element.getClass().getSimpleName());
+    }
+
+    @Override
+    public FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
+        throw new UnsupportedOperationException("visitFieldElement() not expected for element of type " + element.getClass().getSimpleName());
     }
 
     @Override
     public MethodElement visitMethodElement(MethodElement element, MethodBuilder codeBuilder) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("visitMethodElement() not expected for element of type " + element.getClass().getSimpleName());
     }
 
     @Override
