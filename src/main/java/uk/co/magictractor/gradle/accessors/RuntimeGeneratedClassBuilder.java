@@ -17,32 +17,21 @@ package uk.co.magictractor.gradle.accessors;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.CodeBuilder;
-import java.lang.classfile.CodeElement;
-import java.lang.classfile.CodeModel;
-import java.lang.classfile.MethodBuilder;
-import java.lang.classfile.MethodElement;
-import java.lang.classfile.MethodModel;
 import java.lang.classfile.constantpool.PoolEntry;
 import java.lang.constant.ClassDesc;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import org.gradle.internal.impldep.com.google.common.base.Strings;
 import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
 
-import uk.co.magictractor.gradle.classvisitor.ChangeClassVisitor;
-import uk.co.magictractor.gradle.classvisitor.ClassFileElementVisitor;
+import uk.co.magictractor.gradle.classfile.ChangeClassVisitor;
+import uk.co.magictractor.gradle.classfile.ClassFileTraversal;
+import uk.co.magictractor.gradle.classfile.ClassFileElementVisitorList;
 
 /**
  * Builder that copies a given class, transforms it using
@@ -109,15 +98,15 @@ public final class RuntimeGeneratedClassBuilder {
     public byte[] buildBytes() {
         byte[] templateClassBytes = readClassBytes(templateClass);
 
-        VisitorLists visitorLists = new VisitorLists();
+        ClassFileElementVisitorList visitorList = new ClassFileElementVisitorList();
 
         ClassDesc templateClassDesc = ClassDesc.of(templateClass.getName());
         ClassDesc generatedClassDesc = ClassDesc.of(generatedClassName);
-        visitorLists.visitors.add(new ChangeClassVisitor(templateClassDesc, generatedClassDesc));
+        visitorList.add(new ChangeClassVisitor(templateClassDesc, generatedClassDesc));
 
         ClassModel classModel = ClassFile.of().parse(templateClassBytes);
         byte[] binaryRepresentation = ClassFile.of().transformClass(classModel, generatedClassDesc, (b, e) -> {
-            visitClassElement(e, visitorLists, b);
+            new ClassFileTraversal().visitClassElement(e, visitorList, b);
         });
 
         // temp - check that a second pass compresses the constant pool, removing references to the template.
@@ -145,64 +134,6 @@ public final class RuntimeGeneratedClassBuilder {
         }
     }
 
-    private void visitClassElement(ClassElement classElement, VisitorLists visitorLists, ClassBuilder classBuilder) {
-        ClassElement transformedElement = visit(classElement, visitorLists, (v, e) -> v.visitClassElement(e, classBuilder));
-        if (transformedElement == null) {
-            return;
-        }
-        else if (transformedElement instanceof MethodModel mm) {
-            classBuilder.transformMethod(mm, (b, e) -> {
-                visitMethodElement(e, visitorLists, b);
-            });
-        }
-        else {
-            classBuilder.with(transformedElement);
-        }
-    }
-
-    private void visitMethodElement(MethodElement methodElement, VisitorLists visitorLists, MethodBuilder methodBuilder) {
-        MethodElement transformedElement = visit(methodElement, visitorLists, (v, e) -> v.visitMethodElement(e, methodBuilder));
-        if (transformedElement == null) {
-            return;
-        }
-        else if (methodElement instanceof CodeModel cm) {
-            methodBuilder.transformCode(cm, (b, e) -> {
-                visitCodeElement(e, visitorLists, b);
-            });
-        }
-    }
-
-    private void visitCodeElement(CodeElement codeElement, VisitorLists visitorLists, CodeBuilder codeBuilder) {
-        CodeElement transformedElement = visit(codeElement, visitorLists, (v, e) -> v.visitCodeElement(e, codeBuilder));
-        if (transformedElement == null) {
-            return;
-        }
-        else {
-            codeBuilder.with(transformedElement);
-        }
-    }
-
-    private <ELEMENT extends ClassFileElement> ELEMENT visit(ELEMENT element, VisitorLists visitorLists, BiFunction<ClassFileElementVisitor, ELEMENT, ELEMENT> visitFunction) {
-        List<ClassFileElementVisitor> elementVisitors = visitorLists.getVisitorList(element.getClass());
-        if (elementVisitors.isEmpty()) {
-            // Quick exit for common case.
-            return element;
-        }
-
-        ELEMENT result = element;
-        for (ClassFileElementVisitor elementVisitor : elementVisitors) {
-            // result = elementTransform.visit(result, ctx);
-            result = visitFunction.apply(elementVisitor, result);
-            if (result == null) {
-                return null;
-            }
-        }
-
-        // TODO! check that the type does not get changed by a visitor.
-
-        return result;
-    }
-
     // TEMP - create a DumpTransform (suggests Transform might not be the best name - we might just traverse)
     private void dump(ClassModel classModel) {
         for (PoolEntry poolEntry : classModel.constantPool()) {
@@ -220,21 +151,6 @@ public final class RuntimeGeneratedClassBuilder {
             for (ClassFileElement subElement : iterableElement) {
                 dump0(indentSize + 1, subElement);
             }
-        }
-    }
-
-    private static class VisitorLists {
-        private List<ClassFileElementVisitor> visitors = new ArrayList<>();
-        // No key means not checked, empty list for checked and has no visitors.
-        private Map<Class<? extends ClassFileElement>, List<ClassFileElementVisitor>> visitorsForElement = new HashMap<>();
-
-        private List<ClassFileElementVisitor> getVisitorList(Class<? extends ClassFileElement> elementType) {
-            List<ClassFileElementVisitor> result = visitorsForElement.get(elementType);
-            if (result == null) {
-                result = visitors.stream().filter(t -> t.acceptsElement(elementType)).toList();
-                visitorsForElement.put(elementType, result);
-            }
-            return result;
         }
     }
 

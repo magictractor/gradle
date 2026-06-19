@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.classvisitor;
+package uk.co.magictractor.gradle.classfile;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
@@ -60,7 +60,7 @@ public interface ClassFileElementVisitor {
      * using {@link ClassBuilder#with()} or is to be discarded.
      * </p>
      */
-    ClassElement visitClassElement(ClassElement element, ClassBuilder codeBuilder);
+    ClassElement visitClassElement(ClassElement element, ClassBuilder classBuilder);
 
     /**
      * <p>
@@ -76,7 +76,7 @@ public interface ClassFileElementVisitor {
      * handled using {@link MethodBuilder#with()} or is to be discarded.
      * </p>
      */
-    MethodElement visitMethodElement(MethodElement element, MethodBuilder codeBuilder);
+    MethodElement visitMethodElement(MethodElement element, MethodBuilder methodBuilder);
 
     /**
      * <p>
