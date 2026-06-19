@@ -17,7 +17,6 @@ package uk.co.magictractor.gradle.accessors;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
@@ -31,11 +30,13 @@ import java.lang.classfile.MethodElement;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.constantpool.PoolEntry;
 import java.lang.constant.ClassDesc;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import org.gradle.internal.impldep.com.google.common.base.Strings;
 import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
@@ -59,20 +60,54 @@ public final class RuntimeGeneratedClassBuilder {
         this.templateClass = templateClass;
     }
 
-    public Class<?> buildClass() {
-        try {
-            return buildClass0();
+    public <T> T buildInstance(Object... constructorParameters) {
+        Class<T> builtClass = (Class<T>) buildClass();
+        int parameterCount = constructorParameters.length;
+        List<Constructor<?>> constructors = Stream.of(builtClass.getConstructors())
+                .filter(constructor -> constructor.getParameterCount() == parameterCount)
+                .toList();
+
+        // A long time ago I created a reflection util that would go further and
+        // match parameter types.
+        // TODO! find my old code. Maybe in a forgotten Bitbucket account. Best best would be to trawl
+        // old hard drives. Ah - maybe on server that's still functional but unused?
+        if (constructors.size() != 1) {
+            StringBuilder msgBuilder = new StringBuilder(64);
+            msgBuilder.append("No public constructors have ");
+            if (constructors.isEmpty()) {
+                msgBuilder.append(" no parameters.");
+            }
+            else {
+                msgBuilder.append(parameterCount);
+                msgBuilder.append(" parameters.");
+            }
+
+            throw new IllegalArgumentException(msgBuilder.toString());
         }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
+
+        try {
+            return (T) constructors.get(0).newInstance(constructorParameters);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+        catch (IllegalArgumentException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public Class<?> buildClass() {
+        byte[] binaryRepresentation = buildBytes();
+        try {
+            return ACCESSOR_CLASS_LOADER.loadClass(generatedClassName, binaryRepresentation);
         }
         catch (ClassNotFoundException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private Class<?> buildClass0() throws IOException, ClassNotFoundException {
-        byte[] templateClassBytes = readTemplateClassBytes0();
+    public byte[] buildBytes() {
+        byte[] templateClassBytes = readClassBytes(templateClass);
 
         VisitorLists visitorLists = new VisitorLists();
 
@@ -94,15 +129,19 @@ public final class RuntimeGeneratedClassBuilder {
 
         // temp - see what changed
         //System.out.println("----------------------");
-        dump(ClassFile.of().parse(binaryRepresentation));
+        //dump(ClassFile.of().parse(binaryRepresentation));
 
-        return ACCESSOR_CLASS_LOADER.loadClass(generatedClassName, binaryRepresentation);
+        return binaryRepresentation;
     }
 
-    private byte[] readTemplateClassBytes0() throws IOException {
-        String classResourceName = "/" + templateClass.getName().replace('.', '/') + ".class";
-        try (InputStream in = templateClass.getResourceAsStream(classResourceName)) {
+    // could be moved to a static util
+    private byte[] readClassBytes(Class<?> clazz) {
+        String classResourceName = "/" + clazz.getName().replace('.', '/') + ".class";
+        try (InputStream in = clazz.getResourceAsStream(classResourceName)) {
             return ByteStreams.toByteArray(in);
+        }
+        catch (IOException e) {
+            throw new IllegalArgumentException("No .class file found for " + clazz.getName());
         }
     }
 

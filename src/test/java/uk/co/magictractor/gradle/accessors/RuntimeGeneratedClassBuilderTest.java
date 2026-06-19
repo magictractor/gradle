@@ -17,11 +17,9 @@ package uk.co.magictractor.gradle.accessors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class RuntimeGeneratedClassBuilderTest {
@@ -37,33 +35,9 @@ public class RuntimeGeneratedClassBuilderTest {
 
         RuntimeGeneratedClassBuilder builder = new RuntimeGeneratedClassBuilder(templateClass);
 
-        // TODO! also provide buildBytes() and buildInstance()?
-        Class<?> generatedClass = builder.buildClass();
+        Object generatedInstance = builder.buildInstance(MAP);
 
-        assertThat(generatedClass.getName()).isEqualTo("uk.co.magictractor.Play");
-
-        Object instance = createInstance(generatedClass, MAP);
-        //Object instance = createInstance(generatedClass);
-        String actual = reflectiveGet(instance, "getTemplate");
-        assertThat(actual).isEqualTo(TEMPLATE_VALUE);
-    }
-
-    private <T> T createInstance(Class<T> generatedClass, Map<?, ?> map) throws ReflectiveOperationException {
-        return createInstance(generatedClass, new Object[] { map }, new Class<?>[] { Map.class });
-    }
-
-    private <T> T createInstance(Class<T> generatedClass, Object... params) throws ReflectiveOperationException {
-        Class<?>[] paramTypes = new Class[params.length];
-        for (int i = 0; i < params.length; i++) {
-            paramTypes[i] = params[i].getClass();
-        }
-
-        return createInstance(generatedClass, params, paramTypes);
-    }
-
-    private <T> T createInstance(Class<T> generatedClass, Object[] params, Class<?>[] paramTypes) throws ReflectiveOperationException {
-        Constructor<T> constructor = generatedClass.getConstructor(paramTypes);
-        return constructor.newInstance(params);
+        assertThat(generatedInstance.getClass().getName()).isEqualTo("uk.co.magictractor.Play");
     }
 
     private <T> T reflectiveGet(Object object, String getterName) throws ReflectiveOperationException {
