@@ -25,6 +25,7 @@ import java.lang.classfile.FieldBuilder;
 import java.lang.classfile.FieldElement;
 import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
+import java.lang.classfile.MethodModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,13 +62,31 @@ public class ClassFileElementVisitorList implements ClassFileElementVisitor {
     }
 
     @Override
-    public FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
-        return visit(element, (v, e) -> v.visitFieldElement(e, fieldBuilder));
+    public MethodModelParameters visitMethodModelParameters(MethodModelParameters parameters, ClassBuilder classBuilder) {
+        List<ClassFileElementVisitor> elementVisitors = getVisitorList(MethodModel.class);
+        if (elementVisitors.isEmpty()) {
+            return parameters;
+        }
+
+        MethodModelParameters result = parameters;
+        for (ClassFileElementVisitor elementVisitor : elementVisitors) {
+            result = elementVisitor.visitMethodModelParameters(parameters, classBuilder);
+            if (result == null) {
+                return null;
+            }
+        }
+
+        return result;
     }
 
     @Override
     public MethodElement visitMethodElement(MethodElement element, MethodBuilder methodBuilder) {
         return visit(element, (v, e) -> v.visitMethodElement(e, methodBuilder));
+    }
+
+    @Override
+    public FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
+        return visit(element, (v, e) -> v.visitFieldElement(e, fieldBuilder));
     }
 
     @Override
@@ -90,10 +109,7 @@ public class ClassFileElementVisitorList implements ClassFileElementVisitor {
 
         E result = element;
         for (ClassFileElementVisitor elementVisitor : elementVisitors) {
-            // result = elementTransform.visit(result, ctx);
-            //esult = visitFunction.apply(elementVisitor, result);
             result = visitFunction.apply(elementVisitor, result);
-            // elementVisitor.
             if (result == null) {
                 return null;
             }

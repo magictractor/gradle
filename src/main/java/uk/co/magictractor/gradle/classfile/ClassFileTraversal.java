@@ -15,6 +15,7 @@
  */
 package uk.co.magictractor.gradle.classfile;
 
+import java.lang.classfile.AccessFlags;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
@@ -22,17 +23,23 @@ import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.CodeModel;
+import java.lang.classfile.CompoundElement;
 import java.lang.classfile.FieldBuilder;
 import java.lang.classfile.FieldElement;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodBuilder;
 import java.lang.classfile.MethodElement;
 import java.lang.classfile.MethodModel;
+import java.lang.classfile.MethodTransform;
+import java.lang.classfile.constantpool.Utf8Entry;
 import java.lang.constant.ClassDesc;
 
-public class ClassFileTraversal {
+public final class ClassFileTraversal {
 
-    public byte[] visitClass(Class<?> traversalClass, ClassDesc generatedClassDesc, ClassFileElementVisitor visitor) {
+    private ClassFileTraversal() {
+    }
+
+    public static byte[] visitClass(Class<?> traversalClass, ClassDesc generatedClassDesc, ClassFileElementVisitor visitor) {
         byte[] traversalClassBytes = ClassUtil.readClassBytes(traversalClass);
         ClassModel traversalClassModel = ClassFile.of().parse(traversalClassBytes);
         // TODO! ClassFile.of() can take options. Specifically, a second pass would need a new constant pool in order to discard redundant values.
@@ -43,7 +50,7 @@ public class ClassFileTraversal {
         return binaryRepresentation;
     }
 
-    private void visitClassElement(ClassElement classElement, ClassFileElementVisitor visitor, ClassBuilder classBuilder) {
+    public static void visitClassElement(ClassElement classElement, ClassFileElementVisitor visitor, ClassBuilder classBuilder) {
         ClassElement transformedElement = classElement;
         if (visitor.acceptsElementType(classElement.getClass())) {
             transformedElement = visitor.visitClassElement(classElement, classBuilder);
@@ -53,9 +60,7 @@ public class ClassFileTraversal {
         }
 
         if (transformedElement instanceof MethodModel mm) {
-            classBuilder.transformMethod(mm, (b, e) -> {
-                visitMethodElement(e, visitor, b);
-            });
+            visitMethod(mm, visitor, classBuilder);
         }
         else if (transformedElement instanceof FieldModel fm) {
             classBuilder.transformField(fm, (b, e) -> {
@@ -70,7 +75,7 @@ public class ClassFileTraversal {
         }
     }
 
-    public void visitFieldElement(FieldElement fieldElement, ClassFileElementVisitor visitor, FieldBuilder fieldBuilder) {
+    public static void visitFieldElement(FieldElement fieldElement, ClassFileElementVisitor visitor, FieldBuilder fieldBuilder) {
         FieldElement transformedElement = fieldElement;
         if (visitor.acceptsElementType(fieldElement.getClass())) {
             transformedElement = visitor.visitFieldElement(fieldElement, fieldBuilder);
@@ -82,7 +87,27 @@ public class ClassFileTraversal {
         fieldBuilder.with(transformedElement);
     }
 
-    public void visitMethodElement(MethodElement methodElement, ClassFileElementVisitor visitor, MethodBuilder methodBuilder) {
+    public static void visitMethod(MethodModel mm, ClassFileElementVisitor visitor, ClassBuilder classBuilder) {
+        visitMethod(mm.methodName(), mm.methodType(), mm.flags(), mm, visitor, classBuilder);
+    }
+
+    public static void visitMethod(Utf8Entry name, Utf8Entry descriptor, AccessFlags flags, CompoundElement<MethodElement> mm,
+            ClassFileElementVisitor visitor, ClassBuilder classBuilder) {
+        MethodModelParameters mmp = new MethodModelParameters(name, descriptor, flags, mm);
+        if (visitor.acceptsElementType(MethodModel.class)) {
+            mmp = visitor.visitMethodModelParameters(mmp, classBuilder);
+            if (mmp == null) {
+                return;
+            }
+        }
+
+        MethodTransform met = (b, e) -> {
+            visitMethodElement(e, visitor, b);
+        };
+        classBuilder.withMethod(mmp.name(), mmp.descriptor(), flags.flagsMask(), mb -> mb.transform(mm, met));
+    }
+
+    public static void visitMethodElement(MethodElement methodElement, ClassFileElementVisitor visitor, MethodBuilder methodBuilder) {
         MethodElement transformedElement = methodElement;
         if (visitor.acceptsElementType(methodElement.getClass())) {
             transformedElement = visitor.visitMethodElement(methodElement, methodBuilder);
@@ -101,7 +126,7 @@ public class ClassFileTraversal {
         }
     }
 
-    private void visitCodeElement(CodeElement codeElement, ClassFileElementVisitor visitor, CodeBuilder codeBuilder) {
+    public static void visitCodeElement(CodeElement codeElement, ClassFileElementVisitor visitor, CodeBuilder codeBuilder) {
         CodeElement transformedElement = codeElement;
         if (visitor.acceptsElementType(codeElement.getClass())) {
             transformedElement = visitor.visitCodeElement(codeElement, codeBuilder);

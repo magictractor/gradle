@@ -71,23 +71,15 @@ public interface ClassFileElementVisitor {
      * using {@link ClassBuilder#with()} or is to be discarded.
      * </p>
      */
-    ClassElement visitClassElement(ClassElement element, ClassBuilder classBuilder);
+    default ClassElement visitClassElement(ClassElement element, ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException("visitClassElement() may need to be implemented on " + getClass().getName()
+                + " to handle ClassElement type " + element.getClass().getSimpleName());
+    }
 
-    /**
-     * <p>
-     * Returns given {@code FieldElement} if it is to be passed through without
-     * modification and subsequent {@code ClassFileElementVisitor}s applied.
-     * </p>
-     * <p>
-     * Returns a different instance if a change has been made to it and
-     * subsequent {@code ClassFileElementVisitor}s should be applied.
-     * </p>
-     * <p>
-     * Returns {@code null} if the {@code FieldElement} has already been handled
-     * using {@link FieldBuilder#with()} or is to be discarded.
-     * </p>
-     */
-    FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder);
+    default MethodModelParameters visitMethodModelParameters(MethodModelParameters parameters, ClassBuilder classBuilder) {
+        throw new UnsupportedOperationException("visitMethodModelParameters() may need to be implemented on " + getClass().getName()
+                + " because acceptsElementType() accepts type MethodModel");
+    }
 
     /**
      * <p>
@@ -103,7 +95,29 @@ public interface ClassFileElementVisitor {
      * handled using {@link MethodBuilder#with()} or is to be discarded.
      * </p>
      */
-    MethodElement visitMethodElement(MethodElement element, MethodBuilder methodBuilder);
+    default MethodElement visitMethodElement(MethodElement element, MethodBuilder methodBuilder) {
+        throw new UnsupportedOperationException("visitMethodElement()  may need to be implemented " + getClass().getName()
+                + " to handle MethodElement type " + element.getClass().getSimpleName());
+    }
+
+    /**
+     * <p>
+     * Returns given {@code FieldElement} if it is to be passed through without
+     * modification and subsequent {@code ClassFileElementVisitor}s applied.
+     * </p>
+     * <p>
+     * Returns a different instance if a change has been made to it and
+     * subsequent {@code ClassFileElementVisitor}s should be applied.
+     * </p>
+     * <p>
+     * Returns {@code null} if the {@code FieldElement} has already been handled
+     * using {@link FieldBuilder#with()} or is to be discarded.
+     * </p>
+     */
+    default FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
+        throw new UnsupportedOperationException("visitFieldElement() may need to be implemented " + getClass().getName()
+                + " to handle FieldElement type " + element.getClass().getSimpleName());
+    }
 
     /**
      * <p>
@@ -119,6 +133,9 @@ public interface ClassFileElementVisitor {
      * using {@link CodeBuilder#with()} or is to be discarded.
      * </p>
      */
-    CodeElement visitCodeElement(CodeElement element, CodeBuilder codeBuilder);
+    default CodeElement visitCodeElement(CodeElement element, CodeBuilder codeBuilder) {
+        throw new UnsupportedOperationException("visitCodeElement()  may need to to implement " + getClass().getName()
+                + " to handle CodeElement type " + element.getClass().getSimpleName());
+    }
 
 }

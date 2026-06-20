@@ -54,6 +54,11 @@ public final class RuntimeGeneratedClassBuilder {
         return this;
     }
 
+    public RuntimeGeneratedClassBuilder withVisitors(ClassFileElementVisitor... visitors) {
+        Stream.of(visitors).forEach(this.visitors::add);
+        return this;
+    }
+
     public <T> T buildInstance(Object... constructorParameters) {
         Class<T> builtClass = (Class<T>) buildClass();
         int parameterCount = constructorParameters.length;
@@ -115,7 +120,7 @@ public final class RuntimeGeneratedClassBuilder {
             visitor = visitorList;
         }
 
-        byte[] binaryRepresentation = new ClassFileTraversal().visitClass(templateClass, generatedClassDesc, visitor);
+        byte[] binaryRepresentation = ClassFileTraversal.visitClass(templateClass, generatedClassDesc, visitor);
 
         // temp - check that a second pass compresses the constant pool, removing references to the template.
         // looks OK - create a unit test to verify and make second pass configurable

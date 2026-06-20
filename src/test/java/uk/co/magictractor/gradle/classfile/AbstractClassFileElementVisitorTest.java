@@ -19,8 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import org.assertj.core.api.ObjectAssert;
+import org.assertj.core.api.OptionalAssert;
 
 import uk.co.magictractor.gradle.accessors.RuntimeGeneratedClassBuilder;
 
@@ -51,6 +53,19 @@ public class AbstractClassFileElementVisitorTest {
         Object actual = field.get(generatedClass);
 
         return assertThat(actual);
+    }
+
+    protected OptionalAssert<Method> assertGetterMethod(Object generatedObject, String getterName) throws ReflectiveOperationException {
+        return assertThat(getGetterOptional(generatedObject, getterName));
+    }
+
+    protected Optional<Method> getGetterOptional(Object generatedObject, String getterName) {
+        try {
+            return Optional.of(generatedObject.getClass().getMethod(getterName));
+        }
+        catch (NoSuchMethodException e) {
+            return Optional.empty();
+        }
     }
 
 }

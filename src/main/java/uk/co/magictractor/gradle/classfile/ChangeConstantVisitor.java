@@ -15,15 +15,11 @@
  */
 package uk.co.magictractor.gradle.classfile;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
 import java.lang.classfile.FieldBuilder;
 import java.lang.classfile.FieldElement;
-import java.lang.classfile.MethodBuilder;
-import java.lang.classfile.MethodElement;
 import java.lang.classfile.attribute.ConstantValueAttribute;
 import java.lang.classfile.constantpool.ConstantValueEntry;
 import java.lang.classfile.instruction.ConstantInstruction;
@@ -58,11 +54,6 @@ public class ChangeConstantVisitor implements ClassFileElementVisitor {
     }
 
     @Override
-    public ClassElement visitClassElement(ClassElement element, ClassBuilder codeBuilder) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
         FieldElement result = element;
         if (element instanceof ConstantValueAttribute cva) {
@@ -78,18 +69,12 @@ public class ChangeConstantVisitor implements ClassFileElementVisitor {
     }
 
     @Override
-    public MethodElement visitMethodElement(MethodElement element, MethodBuilder codeBuilder) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public CodeElement visitCodeElement(CodeElement element, CodeBuilder codeBuilder) {
         CodeElement result = element;
         if (element instanceof LoadConstantInstruction lci) {
             if (valueMap.containsKey(lci.constantValue())) {
                 ConstantValueEntry newValueConstantEntry = codeBuilder.constantPool().constantValueEntry(valueMap.get(lci.constantValue()));
                 result = ConstantInstruction.ofLoad(lci.opcode(), newValueConstantEntry);
-                System.out.println(element + "  " + element.getClass().getSimpleName());
             }
         }
         else {

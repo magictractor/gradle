@@ -15,16 +15,10 @@
  */
 package uk.co.magictractor.gradle.classfile;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFileBuilder;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.CodeElement;
-import java.lang.classfile.FieldBuilder;
-import java.lang.classfile.FieldElement;
-import java.lang.classfile.MethodBuilder;
-import java.lang.classfile.MethodElement;
 import java.lang.classfile.constantpool.ClassEntry;
 import java.lang.classfile.instruction.FieldInstruction;
 import java.lang.classfile.instruction.InvokeInstruction;
@@ -53,21 +47,6 @@ public class ChangeClassVisitor implements ClassFileElementVisitor {
         return FieldInstruction.class.isAssignableFrom(elementType)
                 || InvokeInstruction.class.isAssignableFrom(elementType)
                 || LocalVariable.class.isAssignableFrom(elementType);
-    }
-
-    @Override
-    public ClassElement visitClassElement(ClassElement element, ClassBuilder codeBuilder) {
-        throw new UnsupportedOperationException("visitClassElement() not expected for element of type " + element.getClass().getSimpleName());
-    }
-
-    @Override
-    public FieldElement visitFieldElement(FieldElement element, FieldBuilder fieldBuilder) {
-        throw new UnsupportedOperationException("visitFieldElement() not expected for element of type " + element.getClass().getSimpleName());
-    }
-
-    @Override
-    public MethodElement visitMethodElement(MethodElement element, MethodBuilder codeBuilder) {
-        throw new UnsupportedOperationException("visitMethodElement() not expected for element of type " + element.getClass().getSimpleName());
     }
 
     @Override
