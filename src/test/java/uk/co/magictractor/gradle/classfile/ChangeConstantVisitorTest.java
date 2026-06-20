@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import uk.co.magictractor.gradle.accessors.RuntimeGeneratedClassBuilder;
 
-public class ChangeValueVisitorTest extends AbstractClassFileElementVisitorTest {
+public class ChangeConstantVisitorTest extends AbstractClassFileElementVisitorTest {
 
     @Test
     public void testAccept() {
