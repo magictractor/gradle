@@ -17,6 +17,10 @@ package uk.co.magictractor.gradle.classfile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassFile.Option;
+import java.lang.classfile.ClassFileElement;
+import java.lang.classfile.ClassModel;
 
 import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
 
@@ -33,6 +37,31 @@ public final class ClassUtil {
         catch (IOException e) {
             throw new IllegalStateException("No .class file found for " + clazz.getName());
         }
+    }
+
+    public static ClassModel parse(Class<?> clazz, Option... options) {
+        byte[] classBytes = readClassBytes(clazz);
+        return ClassFile.of(options).parse(classBytes);
+    }
+
+    public static Class<? extends ClassFileElement> toClassFileElementInterface(Class<? extends ClassFileElement> elementClass) {
+        Class<? extends ClassFileElement> result = null;
+        for (Class<?> elementClassInterface : elementClass.getInterfaces()) {
+            if (ClassFileElement.class.isAssignableFrom(elementClassInterface)) {
+                if (result == null) {
+                    result = (Class<? extends ClassFileElement>) elementClassInterface;
+                }
+                else {
+                    throw new IllegalStateException(elementClass.getName() + " has multiple interfaces that extend ClassFileElement");
+                }
+            }
+        }
+
+        if (result == null) {
+            result = ClassUtil.toClassFileElementInterface((Class<? extends ClassFileElement>) elementClass.getSuperclass());
+        }
+
+        return result;
     }
 
 }
