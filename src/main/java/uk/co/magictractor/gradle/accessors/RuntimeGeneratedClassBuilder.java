@@ -72,7 +72,7 @@ public final class RuntimeGeneratedClassBuilder {
         // old hard drives. Ah - maybe on server that's still functional but unused?
         if (constructors.size() != 1) {
             StringBuilder msgBuilder = new StringBuilder(64);
-            msgBuilder.append("No public constructors have ");
+            msgBuilder.append("No public constructor has ");
             if (constructors.isEmpty()) {
                 msgBuilder.append("no parameters.");
             }
