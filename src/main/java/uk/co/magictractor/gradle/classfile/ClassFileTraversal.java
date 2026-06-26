@@ -60,7 +60,7 @@ public final class ClassFileTraversal {
         }
 
         if (transformedElement instanceof MethodModel mm) {
-            visitMethod(mm, visitor, classBuilder);
+            visitMethod(mm.methodName(), mm.methodType(), mm.flags(), mm, visitor, classBuilder);
         }
         else if (transformedElement instanceof FieldModel fm) {
             classBuilder.transformField(fm, (b, e) -> {
@@ -85,10 +85,6 @@ public final class ClassFileTraversal {
         }
 
         fieldBuilder.with(transformedElement);
-    }
-
-    public static void visitMethod(MethodModel mm, ClassFileElementVisitor visitor, ClassBuilder classBuilder) {
-        visitMethod(mm.methodName(), mm.methodType(), mm.flags(), mm, visitor, classBuilder);
     }
 
     public static void visitMethod(Utf8Entry name, Utf8Entry descriptor, AccessFlags flags, CompoundElement<MethodElement> mm,
