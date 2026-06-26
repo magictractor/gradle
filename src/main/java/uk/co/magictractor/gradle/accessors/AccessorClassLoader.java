@@ -17,6 +17,10 @@ package uk.co.magictractor.gradle.accessors;
 
 public class AccessorClassLoader extends ClassLoader {
 
+    public AccessorClassLoader(ClassLoader parent) {
+        super(parent);
+    }
+
     public Class<?> loadClass(String name, byte[] byteCode) throws ClassNotFoundException {
         super.defineClass(name, byteCode, 0, byteCode.length);
         return loadClass(name);

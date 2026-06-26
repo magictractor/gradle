@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.gradle.internal.impldep.com.google.common.base.Strings;
-
 import uk.co.magictractor.gradle.classfile.ChangeClassVisitor;
 import uk.co.magictractor.gradle.classfile.ClassFileElementVisitor;
 import uk.co.magictractor.gradle.classfile.ClassFileElementVisitorList;
@@ -38,8 +36,6 @@ import uk.co.magictractor.gradle.classfile.ClassFileTraversal;
  * {@code ClassLoader}.
  */
 public final class RuntimeGeneratedClassBuilder {
-
-    private final AccessorClassLoader ACCESSOR_CLASS_LOADER = new AccessorClassLoader();
 
     private final Class<?> templateClass;
     private String generatedClassName = "uk.co.magictractor.Play";
@@ -98,7 +94,7 @@ public final class RuntimeGeneratedClassBuilder {
     public Class<?> buildClass() {
         byte[] binaryRepresentation = buildBytes();
         try {
-            return ACCESSOR_CLASS_LOADER.loadClass(generatedClassName, binaryRepresentation);
+            return new AccessorClassLoader(templateClass.getClassLoader()).loadClass(generatedClassName, binaryRepresentation);
         }
         catch (ClassNotFoundException e) {
             throw new IllegalStateException(e);
@@ -146,7 +142,9 @@ public final class RuntimeGeneratedClassBuilder {
     }
 
     private void dump0(int indentSize, ClassFileElement element) {
-        System.out.print(Strings.repeat("  ", indentSize));
+        for (int i = 0; i < indentSize; i++) {
+            System.out.print("  ");
+        }
         System.out.println(element);
         if (element instanceof Iterable) {
             Iterable<? extends ClassFileElement> iterableElement = (Iterable<? extends ClassFileElement>) element;
