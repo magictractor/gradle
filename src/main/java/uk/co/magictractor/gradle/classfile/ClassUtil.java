@@ -22,8 +22,6 @@ import java.lang.classfile.ClassFile.Option;
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.ClassModel;
 
-import org.gradle.internal.impldep.com.google.common.io.ByteStreams;
-
 public final class ClassUtil {
 
     private ClassUtil() {
@@ -32,7 +30,7 @@ public final class ClassUtil {
     public static byte[] readClassBytes(Class<?> clazz) {
         String classResourceName = "/" + clazz.getName().replace('.', '/') + ".class";
         try (InputStream in = clazz.getResourceAsStream(classResourceName)) {
-            return ByteStreams.toByteArray(in);
+            return in.readAllBytes();
         }
         catch (IOException e) {
             throw new IllegalStateException("No .class file found for " + clazz.getName());
