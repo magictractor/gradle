@@ -16,18 +16,26 @@
 package uk.co.magictractor.gradle.libs;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.artifacts.VersionCatalog;
 import org.gradle.api.artifacts.VersionCatalogsExtension;
+import org.gradle.api.initialization.Settings;
 import org.gradle.api.internal.catalog.AbstractExternalDependencyFactory;
 import org.gradle.api.internal.catalog.DefaultVersionCatalog;
 import org.gradle.api.internal.catalog.DependencyModel;
+import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
 import org.gradle.api.provider.Provider;
+import org.gradle.internal.management.VersionCatalogBuilderInternal;
+
+import uk.co.magictractor.gradle.MagicTractorSettingsPlugin;
 
 /**
  * <p>
@@ -108,41 +116,100 @@ import org.gradle.api.provider.Provider;
 // Javadoc heading: https://stackoverflow.com/a/18141686
 public class ReconciledLibrariesBuilder {
 
-    // TODO! Map should be wrapped by this class. Maybe add withAccessors(bool) and withoutAccessors()? then build returns Object.
-    public Map<String, Provider<? extends Dependency>> build(Project project) {
-        VersionCatalogsExtension versionCatalogsExtension = project.getExtensions().getByType(VersionCatalogsExtension.class);
-        System.out.println("getCatalogNames(): " + versionCatalogsExtension.getCatalogNames());
+    public Object build(Project project) {
+        Settings settings = MagicTractorSettingsPlugin.getSettings(project.getGradle());
+        List<DefaultVersionCatalog> versionCatalogs = versionCatalogsFromSettings(settings);
 
-        for (String catalogName : versionCatalogsExtension.getCatalogNames()) {
-            Object librariesFor = project.getExtensions().getByName(catalogName);
-            System.out.println(librariesFor);
-            Field field;
-            try {
-                field = AbstractExternalDependencyFactory.class.getDeclaredField("config");
-                field.setAccessible(true);
-                DefaultVersionCatalog config = (DefaultVersionCatalog) field.get(librariesFor);
-                System.out.println(config);
-                for (String libraryAlias : config.getLibraryAliases()) {
-                    DependencyModel data = config.getDependencyData(libraryAlias);
-                    System.out.println(data + "  " + data.getVersionRef());
-                }
-            }
-            catch (NoSuchFieldException e) {
-                throw new IllegalStateException(e);
-            }
-            catch (IllegalArgumentException e) {
-                throw new IllegalStateException(e);
-            }
-            catch (IllegalAccessException e) {
-                throw new IllegalStateException(e);
-            }
+        //        for (String libraryAlias : config.getLibraryAliases()) {
+        //            DependencyModel data = config.getDependencyData(libraryAlias);
+        //            System.out.println(data + "  " + data.getVersionRef());
+        //        }
 
-        }
+        Map<String, Provider<MinimalExternalModuleDependency>> map = buildMapFromVersionCatalogs(versionCatalogs, project);
 
-        return build(versionCatalogsExtension);
+        //        Function<String, ClassFileElementVisitor> clonedMethodVisitorFunction = (libraryAlias) -> {
+        //            String methodName = getterNameForLibraryAlias(libraryAlias);
+        //            return new ChangeConstantVisitor("template", methodName + "Value");
+        //        };
+        //        CloneMethodVisitor visitor = new CloneMethodVisitor("getTemplate", map.keySet(), clonedMethodVisitorFunction);
+        //
+        //        Object generated = new RuntimeGeneratedClassBuilder(ReconciledLibs_Template.class)
+        //                .withVisitor(visitor)
+        //                .buildInstance();
+        //
+        //        return generated;
+
+        return map;
     }
 
-    public Map<String, Provider<? extends Dependency>> build(VersionCatalogsExtension versionCatalogsExtension) {
+    // TODO! find the gradle code that does similar and reuse if possible
+    private String getterNameForLibraryAlias(String libraryAlias) {
+        int libraryAliasLen = libraryAlias.length();
+        StringBuilder sb = new StringBuilder(libraryAliasLen + 3);
+        sb.append("get");
+        boolean capitaliseNext = true;
+        for (int i = 0; i < libraryAliasLen; i++) {
+            char c = libraryAlias.charAt(i);
+            if (c > 127) {
+                throw new IllegalArgumentException();
+            }
+            else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+                if (capitaliseNext) {
+                    c = Character.toUpperCase(c);
+                    capitaliseNext = false;
+                }
+                sb.append(c);
+            }
+            // TODO! if using this approach then '-' is treated the same as '.'
+            // and they need nested classes where there is more than one separator
+            // Park and look at generating and compiling Java source files.
+            else if (c == '-') {
+                capitaliseNext = true;
+            }
+            else {
+                throw new IllegalArgumentException("Unexpected character '" + c + "' in library alias \"" + libraryAlias + "\"");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    private List<DefaultVersionCatalog> versionCatalogsFromSettings(Settings settings) {
+        return settings.getDependencyResolutionManagement()
+                .getVersionCatalogs()
+                .stream()
+                .map(VersionCatalogBuilderInternal.class::cast)
+                .map(VersionCatalogBuilderInternal::build)
+                .toList();
+    }
+
+    // Could use this if settings plugin not used.
+    private List<DefaultVersionCatalog> versionCatalogsFromExtensionWithReflection(Project project) {
+        try {
+            return versionCatalogsFromExtensionWithReflection0(project);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private List<DefaultVersionCatalog> versionCatalogsFromExtensionWithReflection0(Project project) throws ReflectiveOperationException {
+        Field field;
+        field = AbstractExternalDependencyFactory.class.getDeclaredField("config");
+        field.setAccessible(true);
+
+        List<DefaultVersionCatalog> versionCatalogs = new ArrayList<>();
+        Set<String> catalogNames = project.getExtensions().getByType(VersionCatalogsExtension.class).getCatalogNames();
+        for (String catalogName : catalogNames) {
+            Object librariesFor = project.getExtensions().getByName(catalogName);
+            DefaultVersionCatalog versionCatalog = (DefaultVersionCatalog) field.get(librariesFor);
+            versionCatalogs.add(versionCatalog);
+        }
+
+        return versionCatalogs;
+    }
+
+    public Map<String, Provider<? extends Dependency>> xxxbuild(VersionCatalogsExtension versionCatalogsExtension) {
         Map<String, Provider<? extends Dependency>> result = new HashMap<>();
         for (VersionCatalog versionCatalog : versionCatalogsExtension) {
             // versionCatalog.getVersionAliases();
@@ -154,6 +221,26 @@ public class ReconciledLibrariesBuilder {
             }
         }
         return result;
+    }
+
+    private Map<String, Provider<MinimalExternalModuleDependency>> buildMapFromVersionCatalogs(List<DefaultVersionCatalog> versionCatalogs, Project project) {
+        Map<String, Provider<MinimalExternalModuleDependency>> map = new HashMap<>();
+        for (DefaultVersionCatalog versionCatalog : versionCatalogs) {
+            addVersionCatalog(map, versionCatalog, project);
+        }
+
+        return map;
+    }
+
+    private void addVersionCatalog(Map<String, Provider<MinimalExternalModuleDependency>> map, DefaultVersionCatalog versionCatalog, Project project) {
+        for (String libraryAlias : versionCatalog.getLibraryAliases()) {
+            DependencyModel library = versionCatalog.getDependencyData(libraryAlias);
+            System.out.println(library);
+
+            ExternalModuleDependencyFactory libraryFor = (ExternalModuleDependencyFactory) project.getExtensions().getByName(versionCatalog.getName());
+            map.put(libraryAlias, libraryFor.create(libraryAlias));
+        }
+
     }
 
 }

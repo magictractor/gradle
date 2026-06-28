@@ -13,9 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.accessors;
+package uk.co.magictractor.gradle.libs;
 
 import java.util.Map;
+
+import org.gradle.api.artifacts.MinimalExternalModuleDependency;
+import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
+import org.gradle.api.provider.Provider;
 
 /**
  * <p>
@@ -26,24 +30,25 @@ import java.util.Map;
  * <p>
  */
 // Note - does not work if there are generics on the class
-public class MapAccessor_Template {
+public class ReconciledLibs_Template implements ExternalModuleDependencyFactory {
 
-    private final Map<String, ?> map;
+    private final Map<String, Provider<MinimalExternalModuleDependency>> map;
 
-    public MapAccessor_Template(Map<String, ?> map) {
+    public ReconciledLibs_Template(Map<String, Provider<MinimalExternalModuleDependency>> map) {
         this.map = map;
     }
 
-    public Object getTemplate() {
-        return get("template");
+    public Provider<MinimalExternalModuleDependency> getTemplate() {
+        return create("template");
     }
 
     // Once everything is robust, this method could be removed
-    public Object get(String libraryAlias) {
-        Object value = map.get(libraryAlias);
+    @Override
+    public Provider<MinimalExternalModuleDependency> create(String alias) {
+        Provider<MinimalExternalModuleDependency> value = map.get(alias);
         if (value == null) {
             // If this is to be retained long-term, then the keys could be sorted
-            throw new IllegalStateException("No library with alias \"" + libraryAlias + "\", the available aliases are " + map.keySet());
+            throw new IllegalStateException("No library with alias \"" + alias + "\", the available aliases are " + map.keySet());
         }
         return value;
     }

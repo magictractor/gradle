@@ -24,17 +24,12 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.function.Supplier;
-
-import javax.inject.Inject;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
-import org.gradle.api.internal.artifacts.DependencyResolutionServices;
 import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.api.model.ObjectFactory;
 
 public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
 
@@ -43,15 +38,11 @@ public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
     private static final String MAGIC_TRACTOR_VERSION_CATALOG = "/gradle/magictractor.versions.toml";
     private static final Map<String, String> ZIP_FILE_SYSTEM_OPTIONS = Map.of("create", "true");
 
-    @Inject
-    protected abstract ObjectFactory getObjectFactory();
-
-    @Inject
-    protected abstract Supplier<DependencyResolutionServices> getDependencyResolutionServicesSupplier();
-
     // Makes the settings available to project Plugins and Extensions.
     // Specifically, it is used to allow version catalog settings to be inspected without resorting to reflection.
     public static Settings getSettings(Gradle gradle) {
+        // hmm, Logger not on Gradle. Just use SLF4J directly?
+        // TODO! return Optional and have fallback to reflection?
         return getGradleExtraProperty(gradle, GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY);
     }
 
@@ -91,11 +82,12 @@ public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
     }
 
     private void configurePluginVersionCatalog(Settings settings) {
-        settings.getDependencyResolutionManagement().getVersionCatalogs().create("libs", builder -> parseVersionCatalog(builder));
+        settings.getDependencyResolutionManagement().getVersionCatalogs().create("magictractorLibs", builder -> parseVersionCatalog(builder));
     }
 
     private void configureProjectVersionCatalog(Settings settings) {
-        // TODO! look to optional .toml file
+        // TODO allow alternative to libs.version.toml to be easily configured
+        // to leave "libs" for reconciled version catalogs
     }
 
     private void parseVersionCatalog(VersionCatalogBuilder builder) {
