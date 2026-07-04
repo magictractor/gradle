@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.classfile;
+package uk.co.magictractor.classy;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
@@ -21,23 +21,25 @@ import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.constantpool.Utf8Entry;
 import java.lang.constant.ConstantDesc;
-import java.util.Collection;
-import java.util.function.Function;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Clones multiple copies of a method.
+ * Changes references to a specified {@code Class} to a different {@code Class}.
+ *
+ * @see https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc
  */
-public class CloneMethodVisitor implements ClassFileElementVisitor {
+public class ChangeMethodNameVisitor implements ClassFileElementVisitor {
 
-    private final String templateMethodName;
-    private final Collection<String> cloneMethodNames;
-    private final Function<String, ClassFileElementVisitor> cloneVisitorFunction;
+    private Map<String, String> methodNameMap = new HashMap<>();
 
-    public <T extends ConstantDesc> CloneMethodVisitor(String templateMethodName, Collection<String> cloneMethodNames,
-            Function<String, ClassFileElementVisitor> cloneVisitorFunction) {
-        this.templateMethodName = templateMethodName;
-        this.cloneMethodNames = cloneMethodNames;
-        this.cloneVisitorFunction = cloneVisitorFunction;
+    public <T extends ConstantDesc> ChangeMethodNameVisitor(String from, String to) {
+        withMapping(from, to);
+    }
+
+    public <T extends ConstantDesc> ChangeMethodNameVisitor withMapping(String from, String to) {
+        methodNameMap.put(from, to);
+        return this;
     }
 
     @Override
@@ -53,18 +55,12 @@ public class CloneMethodVisitor implements ClassFileElementVisitor {
 
     @Override
     public MethodModelParameters visitMethodModelParameters(MethodModelParameters parameters, ClassBuilder classBuilder) {
-        if (!templateMethodName.equals(parameters.name().stringValue())) {
+        if (!methodNameMap.containsKey(parameters.name().stringValue())) {
             return parameters;
         }
 
-        for (String cloneMethodName : cloneMethodNames) {
-            ClassFileElementVisitor cloneVisitor = cloneVisitorFunction.apply(cloneMethodName);
-            Utf8Entry cloneMethodNameEntry = classBuilder.constantPool().utf8Entry(cloneMethodName);
-            ClassFileTraversal.visitMethod(cloneMethodNameEntry, parameters.descriptor(), parameters.flags(), parameters.elements(), cloneVisitor, classBuilder);
-        }
-
-        // null so template is discarded
-        return null;
+        Utf8Entry newNameEntry = classBuilder.constantPool().utf8Entry(methodNameMap.get(parameters.name().stringValue()));
+        return parameters.withMethodName(newNameEntry);
     }
 
 }

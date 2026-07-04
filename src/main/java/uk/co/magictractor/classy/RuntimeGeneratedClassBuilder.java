@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.accessors;
+package uk.co.magictractor.classy;
 
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassFileElement;
@@ -24,11 +24,6 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import uk.co.magictractor.gradle.classfile.ChangeClassVisitor;
-import uk.co.magictractor.gradle.classfile.ClassFileElementVisitor;
-import uk.co.magictractor.gradle.classfile.ClassFileElementVisitorList;
-import uk.co.magictractor.gradle.classfile.ClassFileTraversal;
 
 /**
  * Builder that copies a given class, transforms it using

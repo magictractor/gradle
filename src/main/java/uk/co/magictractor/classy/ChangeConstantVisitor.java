@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.classfile;
+package uk.co.magictractor.classy;
 
 import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.CodeBuilder;

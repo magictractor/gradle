@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.accessors;
+package uk.co.magictractor.classy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,8 +21,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import uk.co.magictractor.gradle.classfile.AbstractClassFileElementVisitorTest;
-import uk.co.magictractor.gradle.classfile.TestCase_Template;
+import uk.co.magictractor.classy.RuntimeGeneratedClassBuilder;
 
 public class RuntimeGeneratedClassBuilderTest extends AbstractClassFileElementVisitorTest {
 

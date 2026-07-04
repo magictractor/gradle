@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.classfile;
+package uk.co.magictractor.classy;
 
 import org.junit.jupiter.api.Test;
 
-import uk.co.magictractor.gradle.accessors.RuntimeGeneratedClassBuilder;
+import uk.co.magictractor.classy.ChangeConstantVisitor;
+import uk.co.magictractor.classy.ChangeMethodNameVisitor;
+import uk.co.magictractor.classy.RuntimeGeneratedClassBuilder;
 
 public class ChangeMethodNameVisitorTest extends AbstractClassFileElementVisitorTest {
 

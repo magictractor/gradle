@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle.classfile;
+package uk.co.magictractor.classy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,6 +26,8 @@ import java.util.Set;
 import com.github.javaparser.quality.Preconditions;
 
 import org.junit.jupiter.api.Test;
+
+import uk.co.magictractor.classy.ClassUtil;
 
 public class ClassUtilTest {
 
