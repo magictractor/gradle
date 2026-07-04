@@ -15,27 +15,22 @@
  */
 package uk.co.magictractor.gradle.libs;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.artifacts.VersionCatalog;
-import org.gradle.api.artifacts.VersionCatalogsExtension;
 import org.gradle.api.initialization.Settings;
-import org.gradle.api.internal.catalog.AbstractExternalDependencyFactory;
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
+import org.gradle.api.initialization.dsl.VersionCatalogBuilder.LibraryAliasBuilder;
+import org.gradle.api.initialization.resolve.MutableVersionCatalogContainer;
 import org.gradle.api.internal.catalog.DefaultVersionCatalog;
 import org.gradle.api.internal.catalog.DependencyModel;
-import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
-import org.gradle.api.provider.Provider;
+import org.gradle.api.internal.catalog.VersionModel;
 import org.gradle.internal.management.VersionCatalogBuilderInternal;
-
-import uk.co.magictractor.gradle.MagicTractorSettingsPlugin;
 
 /**
  * <p>
@@ -111,136 +106,91 @@ import uk.co.magictractor.gradle.MagicTractorSettingsPlugin;
  * {@code ~\.gradle\caches\{gradle.version}\dependencies-accessors\{uuid}\sources\org\gradle\accessors\dm}.
  * <p>
  */
-// could create an extension, but then cannot be wrapped with an accessor...
-//
-// Javadoc heading: https://stackoverflow.com/a/18141686
 public class ReconciledLibrariesBuilder {
 
-    public Object build(Project project) {
-        Settings settings = MagicTractorSettingsPlugin.getSettings(project.getGradle());
-        List<DefaultVersionCatalog> versionCatalogs = versionCatalogsFromSettings(settings);
+    private final HashMap<Integer, String> reconciledLibsVersionCatalogNames = new LinkedHashMap<>();
 
-        //        for (String libraryAlias : config.getLibraryAliases()) {
-        //            DependencyModel data = config.getDependencyData(libraryAlias);
-        //            System.out.println(data + "  " + data.getVersionRef());
-        //        }
+    public ReconciledLibrariesBuilder(Settings settings) {
+        //settings.getDependencyResolutionManagement().getVersionCatalogs().create("magictractorLibs", builder -> parseVersionCatalog(builder));
+        MutableVersionCatalogContainer vcbs = settings.getDependencyResolutionManagement().getVersionCatalogs();
+        List<DefaultVersionCatalog> vcs = vcbs.stream()
+                .map(VersionCatalogBuilderInternal.class::cast)
+                .map(VersionCatalogBuilderInternal::build)
+                .toList();
 
-        Map<String, Provider<MinimalExternalModuleDependency>> map = buildMapFromVersionCatalogs(versionCatalogs, project);
-
-        //        Function<String, ClassFileElementVisitor> clonedMethodVisitorFunction = (libraryAlias) -> {
-        //            String methodName = getterNameForLibraryAlias(libraryAlias);
-        //            return new ChangeConstantVisitor("template", methodName + "Value");
-        //        };
-        //        CloneMethodVisitor visitor = new CloneMethodVisitor("getTemplate", map.keySet(), clonedMethodVisitorFunction);
-        //
-        //        Object generated = new RuntimeGeneratedClassBuilder(ReconciledLibs_Template.class)
-        //                .withVisitor(visitor)
-        //                .buildInstance();
-        //
-        //        return generated;
-
-        return map;
-    }
-
-    // TODO! find the gradle code that does similar and reuse if possible
-    private String getterNameForLibraryAlias(String libraryAlias) {
-        int libraryAliasLen = libraryAlias.length();
-        StringBuilder sb = new StringBuilder(libraryAliasLen + 3);
-        sb.append("get");
-        boolean capitaliseNext = true;
-        for (int i = 0; i < libraryAliasLen; i++) {
-            char c = libraryAlias.charAt(i);
-            if (c > 127) {
-                throw new IllegalArgumentException();
+        JavaVersionAliasMap<VersionModel> versionsMap = new JavaVersionAliasMap<>();
+        JavaVersionAliasMap<DependencyModel> librariesMap = new JavaVersionAliasMap<>();
+        for (DefaultVersionCatalog vc : vcs) {
+            for (String versionAlias : vc.getVersionAliases()) {
+                versionsMap.put(versionAlias, vc.getVersion(versionAlias));
             }
-            else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-                if (capitaliseNext) {
-                    c = Character.toUpperCase(c);
-                    capitaliseNext = false;
-                }
-                sb.append(c);
-            }
-            // TODO! if using this approach then '-' is treated the same as '.'
-            // and they need nested classes where there is more than one separator
-            // Park and look at generating and compiling Java source files.
-            else if (c == '-') {
-                capitaliseNext = true;
-            }
-            else {
-                throw new IllegalArgumentException("Unexpected character '" + c + "' in library alias \"" + libraryAlias + "\"");
+            for (String libraryAlias : vc.getLibraryAliases()) {
+                librariesMap.put(libraryAlias, vc.getDependencyData(libraryAlias));
             }
         }
+
+        Set<Integer> javaVersionBoundaries = new HashSet<>();
+        javaVersionBoundaries.addAll(versionsMap.getJavaVersionBoundaries());
+        javaVersionBoundaries.addAll(librariesMap.getJavaVersionBoundaries());
+
+        for (int javaVersionBoundary : javaVersionBoundaries) {
+            String name = createReconciledLibsVersionCatalogName(javaVersionBoundary);
+            VersionCatalogBuilder n = vcbs.create(name);
+            // n.library("alias", "group", "artifact").versionRef("versionRef");
+            initReconciledLibsVersionCatalog(n, javaVersionBoundary, versionsMap, librariesMap);
+
+            reconciledLibsVersionCatalogNames.put(javaVersionBoundary, name);
+        }
+    }
+
+    private void initReconciledLibsVersionCatalog(
+            VersionCatalogBuilder versionCatalogBuilder, int javaVersion,
+            JavaVersionAliasMap<VersionModel> versionsMap, JavaVersionAliasMap<DependencyModel> librariesMap) {
+
+        //Map<JavaVersionAlias, VersionModel> q = versionsMap.aliasesForJavaVersion(javaVersion);
+        for (var entry : versionsMap.aliasesForJavaVersion(javaVersion).entrySet()) {
+            //System.out.println(entry.getKey().getNormalisedAlias() + " -> " + entry.getValue().getVersion().toString());
+            versionCatalogBuilder.version(entry.getKey().getNormalisedAlias(), entry.getValue().getVersion().toString());
+        }
+
+        for (var entry : librariesMap.aliasesForJavaVersion(javaVersion).entrySet()) {
+            //System.out.println(entry.getKey().getNormalisedAlias() + " -> " + entry.getValue().getVersion().toString());
+            DependencyModel dependencyModel = entry.getValue();
+            LibraryAliasBuilder lib = versionCatalogBuilder.library(entry.getKey().getNormalisedAlias(), dependencyModel.getGroup(), dependencyModel.getName());
+            if (dependencyModel.getVersionRef() != null) {
+                lib.versionRef(dependencyModel.getVersionRef());
+            }
+            else {
+                lib.version(dependencyModel.getVersion().toString());
+            }
+        }
+    }
+
+    private String createReconciledLibsVersionCatalogName(int javaVersion) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("_reconciledLibs");
+        if (javaVersion <= 9) {
+            sb.append('0');
+        }
+        sb.append(javaVersion);
 
         return sb.toString();
     }
 
-    private List<DefaultVersionCatalog> versionCatalogsFromSettings(Settings settings) {
-        return settings.getDependencyResolutionManagement()
-                .getVersionCatalogs()
-                .stream()
-                .map(VersionCatalogBuilderInternal.class::cast)
-                .map(VersionCatalogBuilderInternal::build)
-                .toList();
-    }
+    public String getVersionCatalogNameForJavaVersion(int javaVersion) {
+        Iterator<Map.Entry<Integer, String>> iter = reconciledLibsVersionCatalogNames.entrySet().iterator();
 
-    // Could use this if settings plugin not used.
-    private List<DefaultVersionCatalog> versionCatalogsFromExtensionWithReflection(Project project) {
-        try {
-            return versionCatalogsFromExtensionWithReflection0(project);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private List<DefaultVersionCatalog> versionCatalogsFromExtensionWithReflection0(Project project) throws ReflectiveOperationException {
-        Field field;
-        field = AbstractExternalDependencyFactory.class.getDeclaredField("config");
-        field.setAccessible(true);
-
-        List<DefaultVersionCatalog> versionCatalogs = new ArrayList<>();
-        Set<String> catalogNames = project.getExtensions().getByType(VersionCatalogsExtension.class).getCatalogNames();
-        for (String catalogName : catalogNames) {
-            Object librariesFor = project.getExtensions().getByName(catalogName);
-            DefaultVersionCatalog versionCatalog = (DefaultVersionCatalog) field.get(librariesFor);
-            versionCatalogs.add(versionCatalog);
-        }
-
-        return versionCatalogs;
-    }
-
-    public Map<String, Provider<? extends Dependency>> xxxbuild(VersionCatalogsExtension versionCatalogsExtension) {
-        Map<String, Provider<? extends Dependency>> result = new HashMap<>();
-        for (VersionCatalog versionCatalog : versionCatalogsExtension) {
-            // versionCatalog.getVersionAliases();
-            versionCatalog.getLibraryAliases();
-            for (String libraryAlias : versionCatalog.getLibraryAliases()) {
-                Provider<MinimalExternalModuleDependency> library = versionCatalog.findLibrary(libraryAlias).get();
-                System.out.println(libraryAlias + " -> " + library.get());
-                result.put(libraryAlias, library);
+        String versionCatalogName = iter.next().getValue();
+        while (iter.hasNext()) {
+            Map.Entry<Integer, String> candidate = iter.next();
+            if (candidate.getKey() < javaVersion) {
+                break;
             }
-        }
-        return result;
-    }
-
-    private Map<String, Provider<MinimalExternalModuleDependency>> buildMapFromVersionCatalogs(List<DefaultVersionCatalog> versionCatalogs, Project project) {
-        Map<String, Provider<MinimalExternalModuleDependency>> map = new HashMap<>();
-        for (DefaultVersionCatalog versionCatalog : versionCatalogs) {
-            addVersionCatalog(map, versionCatalog, project);
+            versionCatalogName = candidate.getValue();
         }
 
-        return map;
-    }
-
-    private void addVersionCatalog(Map<String, Provider<MinimalExternalModuleDependency>> map, DefaultVersionCatalog versionCatalog, Project project) {
-        for (String libraryAlias : versionCatalog.getLibraryAliases()) {
-            DependencyModel library = versionCatalog.getDependencyData(libraryAlias);
-            System.out.println(library);
-
-            ExternalModuleDependencyFactory libraryFor = (ExternalModuleDependencyFactory) project.getExtensions().getByName(versionCatalog.getName());
-            map.put(libraryAlias, libraryFor.create(libraryAlias));
-        }
-
+        System.out.println("getVersionCatalogNameForJavaVersion(" + javaVersion + ") -> " + versionCatalogName);
+        return versionCatalogName;
     }
 
 }

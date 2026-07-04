@@ -31,6 +31,8 @@ import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
 import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser;
 import org.gradle.api.invocation.Gradle;
 
+import uk.co.magictractor.gradle.libs.ReconciledLibrariesBuilder;
+
 public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
 
     private static final String GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY = MagicTractorSettingsPlugin.class.getPackageName() + "settings";
@@ -70,7 +72,8 @@ public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
 
         // This plugin provides a version catalog for libs that are used in most projects
         // for logging, testing etc.
-        configurePluginVersionCatalog(settings);
+        configureMagictractorLibs(settings);
+        configureReconciledLibs(settings);
 
         // Looks for .toml files in the project. Not mandatory.
         configureProjectVersionCatalog(settings);
@@ -81,8 +84,16 @@ public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
         // See ReconciledLibrariesBuilder.
     }
 
-    private void configurePluginVersionCatalog(Settings settings) {
+    private void configureMagictractorLibs(Settings settings) {
         settings.getDependencyResolutionManagement().getVersionCatalogs().create("magictractorLibs", builder -> parseVersionCatalog(builder));
+    }
+
+    /**
+     * Creates {@code reconciledLibsNN} version catalogs for each library or
+     * version alias with a {@code .javaNN} suffix. TODO! say more...
+     */
+    private void configureReconciledLibs(Settings settings) {
+        settings.getExtensions().add("reconciledLibs", new ReconciledLibrariesBuilder(settings));
     }
 
     private void configureProjectVersionCatalog(Settings settings) {

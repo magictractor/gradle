@@ -47,7 +47,7 @@ public class MagicTractorPluginTest {
                 .withTestKitDir(gradleUserHome)
                 .withProjectDir(testProjectDir)
                 // TODO! why does this fail in Eclipse when using the configuration cache?
-                .withArguments("-Dorg.gradle.configuration-cache=false", "clean", "build")
+                .withArguments("-Dorg.gradle.configuration-cache=false", "clean", "build", "--stacktrace")
                 //.withArguments("clean", "build")
                 // forwardOutput temporary while developing
                 .forwardOutput()

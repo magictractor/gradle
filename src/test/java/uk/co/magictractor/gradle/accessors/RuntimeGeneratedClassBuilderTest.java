@@ -22,7 +22,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import uk.co.magictractor.gradle.classfile.AbstractClassFileElementVisitorTest;
-import uk.co.magictractor.gradle.libs.ReconciledLibs_Template;
+import uk.co.magictractor.gradle.classfile.TestCase_Template;
 
 public class RuntimeGeneratedClassBuilderTest extends AbstractClassFileElementVisitorTest {
 
@@ -32,8 +32,8 @@ public class RuntimeGeneratedClassBuilderTest extends AbstractClassFileElementVi
 
     @Test
     public void t() throws Exception {
-        Object generated = new RuntimeGeneratedClassBuilder(ReconciledLibs_Template.class)
-                .buildInstance(MAP);
+        Object generated = new RuntimeGeneratedClassBuilder(TestCase_Template.class)
+                .buildInstance();
 
         assertThat(generated.getClass().getName()).isEqualTo("uk.co.magictractor.Play");
     }

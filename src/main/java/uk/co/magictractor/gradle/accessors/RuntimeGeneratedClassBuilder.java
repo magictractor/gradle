@@ -69,8 +69,11 @@ public final class RuntimeGeneratedClassBuilder {
         if (constructors.size() != 1) {
             StringBuilder msgBuilder = new StringBuilder(64);
             msgBuilder.append("No public constructor has ");
-            if (constructors.isEmpty()) {
+            if (parameterCount == 0) {
                 msgBuilder.append("no parameters.");
+            }
+            else if (parameterCount == 1) {
+                msgBuilder.append("1 parameter.");
             }
             else {
                 msgBuilder.append(parameterCount);
