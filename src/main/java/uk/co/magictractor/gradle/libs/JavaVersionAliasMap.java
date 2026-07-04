@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -35,6 +36,10 @@ public class JavaVersionAliasMap<V> {
     // LinkedHashMap to keep same order as in the version catalogs.
     private final Map<String, TreeMap<JavaVersionAlias, V>> aliases = new LinkedHashMap<>();
     private final Collection<Integer> javaVersionBoundaries = new TreeSet<>(JAVA_VERSION_COMPARATOR);
+
+    public Set<String> keySet() {
+        return aliases.keySet();
+    }
 
     public void put(String catalogAlias, V value) {
         put(JavaVersionAlias.of(catalogAlias), value);
@@ -54,11 +59,12 @@ public class JavaVersionAliasMap<V> {
         return javaVersionBoundaries;
     }
 
-    public Map<JavaVersionAlias, V> aliasesForJavaVersion(int javaVersion) {
-        Map<JavaVersionAlias, V> result = new LinkedHashMap<>(aliases.size());
+    // TODO! cache the result and/or provide getters for individual libraries
+    public Map<String, V> aliasesForJavaVersion(int javaVersion) {
+        Map<String, V> result = new LinkedHashMap<>(aliases.size());
         for (var candidates : aliases.values()) {
             Map.Entry<JavaVersionAlias, V> entry = aliasForJavaVersion(javaVersion, candidates);
-            result.put(entry.getKey(), entry.getValue());
+            result.put(entry.getKey().getNormalisedAlias(), entry.getValue());
         }
         return result;
     }

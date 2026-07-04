@@ -15,13 +15,9 @@
  */
 package uk.co.magictractor.gradle;
 
-import java.util.Set;
-
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.artifacts.VersionCatalogsExtension;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.initialization.Settings;
@@ -36,8 +32,8 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
-import uk.co.magictractor.gradle.libs.ReconciledLibs;
 import uk.co.magictractor.gradle.libs.ReconciledLibrariesBuilder;
+import uk.co.magictractor.gradle.libs.ReconciledLibs;
 
 /**
  * <p>
@@ -142,57 +138,19 @@ public class MagicTractorPlugin implements Plugin<Project> {
     private void configureReconciledLibraries(MagicTractorExtension mte) {
         Project project = mte.getProject();
 
-        // Extra registration is experimental... makes no different
-        project.getDependencies().getExtensions().add("magictractor", mte);
-
-        // DynamicObect is experimental
-        ReconciledLibs dyno = project.getExtensions().create("dyno", ReconciledLibs.class, mte.getJavaVersion());
-        System.out.println("dyno: " + dyno + "  " + dyno.getClass());
-
-        // temp - need to configure ordering so that libs gets set before dependencies block is processed...
-        // Not extension... a task?
-        //Object dependencies = project.getExtensions().getByName("dependencies");
-        //System.out.println("dependencies: " + dependencies + "  " + dependencies.getClass());
-        Set<Task> dependencies = project.getTasksByName("dependencies", false);
-        // dependencies: [task ':dependencies']  class org.gradle.api.tasks.diagnostics.DependencyReportTask_Decorated
-        // Nope - task available but not used
-        //System.out.println("dependencies: " + dependencies + "  " + dependencies.iterator().next().getClass());
-
-        DependencyHandler dependencyHandler = project.getDependencies();
-        // dependencyHandler.
-
-        // Object reconciledAccessor = new XxxReconciledLibrariesBuilder().build(project);
-
         Settings settings = MagicTractorSettingsPlugin.getSettings(project.getGradle());
-        ReconciledLibrariesBuilder reconciledLibsBuilder = settings.getExtensions().getByType(ReconciledLibrariesBuilder.class);
+        ReconciledLibrariesBuilder reconciledLibsBuilder = project.getObjects().newInstance(ReconciledLibrariesBuilder.class, settings);
+        ReconciledLibs reconciledLibs = reconciledLibsBuilder.build(mte.getJavaVersion());
 
-        // Ah, the values in MagicTractor extension are not populated yet...
-        // String reconciledLibsName = reconciledLibsBuilder.getVersionCatalogNameForJavaVersion(mte.getJavaVersion().get());
-        String reconciledLibsName = reconciledLibsBuilder.getVersionCatalogNameForJavaVersion(17);
-        // System.out.println("reconciledLibs from " + reconciledLibsName);
-
-        Object reconciledLibs = project.getExtensions().getByName(reconciledLibsName);
-
-        // No. Provider does not get resolved.
-        Provider<Object> reconciledLibsProvider = mte.getJavaVersion()
-                .map(reconciledLibsBuilder::getVersionCatalogNameForJavaVersion)
-                .map(project.getExtensions()::getByName);
-        mte.getProject().getExtensions().add("libsp", reconciledLibsProvider);
+        // TODO! allow the name of the reconciled libs extension to be configured in the magictractor block
+        mte.getProject().getExtensions().add("reconciledLibs", reconciledLibs);
 
         if (mte.getProject().getExtensions().findByName("libs") == null) {
             mte.getProject().getExtensions().add("libs", reconciledLibs);
         }
         else {
-            mte.getProject().getExtensions().add("reconciledLibs", reconciledLibs);
-            // TODO! also permit the name of the reconciled libs extension to be configured in the magictractor block
-            mte.getProject().getLogger().lifecycle("Reconciled libs not available in \"libs\"; but are in \"reconciledLibs\".");
+            mte.getProject().getLogger().lifecycle("Reconciled libs not available in \"libs\"; only in \"reconciledLibs\".");
         }
-
-        VersionCatalogsExtension versionCatalogsExtension = mte.getProject().getExtensions().getByType(VersionCatalogsExtension.class);
-        System.out.println("getCatalogNames(): " + versionCatalogsExtension.getCatalogNames());
-
-        Object libs = mte.getProject().getExtensions().getByName("libs");
-        System.out.println("libs: " + libs + "  " + libs.getClass());
     }
 
     /**

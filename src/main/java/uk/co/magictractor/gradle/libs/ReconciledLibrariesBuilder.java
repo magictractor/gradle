@@ -16,20 +16,19 @@
 package uk.co.magictractor.gradle.libs;
 
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
+import javax.inject.Inject;
 
 import org.gradle.api.initialization.Settings;
-import org.gradle.api.initialization.dsl.VersionCatalogBuilder;
-import org.gradle.api.initialization.dsl.VersionCatalogBuilder.LibraryAliasBuilder;
 import org.gradle.api.initialization.resolve.MutableVersionCatalogContainer;
 import org.gradle.api.internal.catalog.DefaultVersionCatalog;
 import org.gradle.api.internal.catalog.DependencyModel;
 import org.gradle.api.internal.catalog.VersionModel;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.internal.management.VersionCatalogBuilderInternal;
 
 /**
@@ -108,18 +107,21 @@ import org.gradle.internal.management.VersionCatalogBuilderInternal;
  */
 public class ReconciledLibrariesBuilder {
 
-    private final HashMap<Integer, String> reconciledLibsVersionCatalogNames = new LinkedHashMap<>();
+    private final ObjectFactory objectFactory;
 
-    public ReconciledLibrariesBuilder(Settings settings) {
-        //settings.getDependencyResolutionManagement().getVersionCatalogs().create("magictractorLibs", builder -> parseVersionCatalog(builder));
+    private final JavaVersionAliasMap<VersionModel> versionsMap = new JavaVersionAliasMap<>();
+    private final JavaVersionAliasMap<DependencyModel> librariesMap = new JavaVersionAliasMap<>();
+
+    @Inject
+    public ReconciledLibrariesBuilder(Settings settings, ObjectFactory objectFactory) {
+        this.objectFactory = objectFactory;
+
         MutableVersionCatalogContainer vcbs = settings.getDependencyResolutionManagement().getVersionCatalogs();
         List<DefaultVersionCatalog> vcs = vcbs.stream()
                 .map(VersionCatalogBuilderInternal.class::cast)
                 .map(VersionCatalogBuilderInternal::build)
                 .toList();
 
-        JavaVersionAliasMap<VersionModel> versionsMap = new JavaVersionAliasMap<>();
-        JavaVersionAliasMap<DependencyModel> librariesMap = new JavaVersionAliasMap<>();
         for (DefaultVersionCatalog vc : vcs) {
             for (String versionAlias : vc.getVersionAliases()) {
                 versionsMap.put(versionAlias, vc.getVersion(versionAlias));
@@ -128,69 +130,37 @@ public class ReconciledLibrariesBuilder {
                 librariesMap.put(libraryAlias, vc.getDependencyData(libraryAlias));
             }
         }
-
-        Set<Integer> javaVersionBoundaries = new HashSet<>();
-        javaVersionBoundaries.addAll(versionsMap.getJavaVersionBoundaries());
-        javaVersionBoundaries.addAll(librariesMap.getJavaVersionBoundaries());
-
-        for (int javaVersionBoundary : javaVersionBoundaries) {
-            String name = createReconciledLibsVersionCatalogName(javaVersionBoundary);
-            VersionCatalogBuilder n = vcbs.create(name);
-            // n.library("alias", "group", "artifact").versionRef("versionRef");
-            initReconciledLibsVersionCatalog(n, javaVersionBoundary, versionsMap, librariesMap);
-
-            reconciledLibsVersionCatalogNames.put(javaVersionBoundary, name);
-        }
     }
 
-    private void initReconciledLibsVersionCatalog(
-            VersionCatalogBuilder versionCatalogBuilder, int javaVersion,
-            JavaVersionAliasMap<VersionModel> versionsMap, JavaVersionAliasMap<DependencyModel> librariesMap) {
-
-        //Map<JavaVersionAlias, VersionModel> q = versionsMap.aliasesForJavaVersion(javaVersion);
-        for (var entry : versionsMap.aliasesForJavaVersion(javaVersion).entrySet()) {
-            //System.out.println(entry.getKey().getNormalisedAlias() + " -> " + entry.getValue().getVersion().toString());
-            versionCatalogBuilder.version(entry.getKey().getNormalisedAlias(), entry.getValue().getVersion().toString());
+    // Property must be used because the MagicTractorExtension is not populated until later.
+    public ReconciledLibs build(Property<Integer> javaVersion) {
+        Provider<Map<String, DependencyModel>> a = javaVersion.map(librariesMap::aliasesForJavaVersion);
+        Map<String, Provider<String>> d = new HashMap<>();
+        for (String libraryAlias : librariesMap.keySet()) {
+            Provider<String> libraryProvider = a.map(m -> dependencyString(m.get(libraryAlias), javaVersion));
+            d.put(libraryAlias, libraryProvider);
         }
 
-        for (var entry : librariesMap.aliasesForJavaVersion(javaVersion).entrySet()) {
-            //System.out.println(entry.getKey().getNormalisedAlias() + " -> " + entry.getValue().getVersion().toString());
-            DependencyModel dependencyModel = entry.getValue();
-            LibraryAliasBuilder lib = versionCatalogBuilder.library(entry.getKey().getNormalisedAlias(), dependencyModel.getGroup(), dependencyModel.getName());
-            if (dependencyModel.getVersionRef() != null) {
-                lib.versionRef(dependencyModel.getVersionRef());
-            }
-            else {
-                lib.version(dependencyModel.getVersion().toString());
-            }
-        }
+        return objectFactory.newInstance(ReconciledLibs.class, d);
     }
 
-    private String createReconciledLibsVersionCatalogName(int javaVersion) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("_reconciledLibs");
-        if (javaVersion <= 9) {
-            sb.append('0');
+    private String dependencyString(DependencyModel dependencyModel, Property<Integer> javaVersion) {
+        StringBuilder sb = new StringBuilder(64);
+        sb.append(dependencyModel.getGroup());
+        sb.append(':');
+        sb.append(dependencyModel.getName());
+        sb.append(':');
+        if (dependencyModel.getVersionRef() != null) {
+            VersionModel versionModel = versionsMap.aliasesForJavaVersion(javaVersion.get()).get(dependencyModel.getVersionRef());
+            sb.append(versionModel.getVersion());
         }
-        sb.append(javaVersion);
+        else {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        System.out.println("dependencyString -> " + sb.toString());
 
         return sb.toString();
-    }
-
-    public String getVersionCatalogNameForJavaVersion(int javaVersion) {
-        Iterator<Map.Entry<Integer, String>> iter = reconciledLibsVersionCatalogNames.entrySet().iterator();
-
-        String versionCatalogName = iter.next().getValue();
-        while (iter.hasNext()) {
-            Map.Entry<Integer, String> candidate = iter.next();
-            if (candidate.getKey() < javaVersion) {
-                break;
-            }
-            versionCatalogName = candidate.getValue();
-        }
-
-        System.out.println("getVersionCatalogNameForJavaVersion(" + javaVersion + ") -> " + versionCatalogName);
-        return versionCatalogName;
     }
 
 }
