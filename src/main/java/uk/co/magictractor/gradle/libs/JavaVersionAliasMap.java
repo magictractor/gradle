@@ -15,14 +15,12 @@
  */
 package uk.co.magictractor.gradle.libs;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.slf4j.Logger;
 
@@ -35,7 +33,6 @@ public class JavaVersionAliasMap<V> {
 
     // LinkedHashMap to keep same order as in the version catalogs.
     private final Map<String, TreeMap<JavaVersionAlias, V>> aliases = new LinkedHashMap<>();
-    private final Collection<Integer> javaVersionBoundaries = new TreeSet<>(JAVA_VERSION_COMPARATOR);
 
     public Set<String> keySet() {
         return aliases.keySet();
@@ -45,28 +42,18 @@ public class JavaVersionAliasMap<V> {
         put(JavaVersionAlias.of(catalogAlias), value);
     }
 
-    public void put(JavaVersionAlias alias, V value) {
+    private void put(JavaVersionAlias alias, V value) {
         TreeMap<JavaVersionAlias, V> v = aliases.computeIfAbsent(alias.getNormalisedAlias(), _ -> new TreeMap<>(JAVA_VERSION_ALIAS_COMPARATOR));
-        //if (!v.add(alias)) {
         if (v.containsKey(alias)) {
-            throw new IllegalArgumentException("Already have value matching " + alias);
+            throw new IllegalArgumentException("Already have value matching \"" + alias.getCatalogAlias() + "\"");
         }
         v.put(alias, value);
-        javaVersionBoundaries.add(alias.getUptoJavaVersion());
     }
 
-    public Collection<Integer> getJavaVersionBoundaries() {
-        return javaVersionBoundaries;
-    }
-
-    // TODO! cache the result and/or provide getters for individual libraries
-    public Map<String, V> aliasesForJavaVersion(int javaVersion) {
-        Map<String, V> result = new LinkedHashMap<>(aliases.size());
-        for (var candidates : aliases.values()) {
-            Map.Entry<JavaVersionAlias, V> entry = aliasForJavaVersion(javaVersion, candidates);
-            result.put(entry.getKey().getNormalisedAlias(), entry.getValue());
-        }
-        return result;
+    public V valueForJavaVersion(String normalisedAlias, int javaVersion) {
+        TreeMap<JavaVersionAlias, V> candidates = aliases.get(normalisedAlias);
+        Map.Entry<JavaVersionAlias, V> entry = aliasForJavaVersion(javaVersion, candidates);
+        return entry.getValue();
     }
 
     /** @param candidates */
@@ -76,7 +63,7 @@ public class JavaVersionAliasMap<V> {
         Map.Entry<JavaVersionAlias, V> result = iter.next();
         JavaVersionAlias alias = result.getKey();
         if (!alias.isCatchAll()) {
-            String message = "Aliases for " + alias.getNormalisedAlias() + " are only specified up to Java version " + alias.getUptoJavaVersion();
+            String message = "Aliases for \"" + alias.getNormalisedAlias() + "\" are only specified up to Java version " + alias.getUptoJavaVersion();
             if (alias.getUptoJavaVersion() < javaVersion) {
                 throw new IllegalStateException(message);
             }
@@ -84,8 +71,6 @@ public class JavaVersionAliasMap<V> {
                 LOGGER.warn(message);
             }
         }
-
-        // TODO! check first has max upto value, else log warning
 
         while (iter.hasNext()) {
             Map.Entry<JavaVersionAlias, V> candidate = iter.next();

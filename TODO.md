@@ -15,13 +15,6 @@ Have changed template, but want to edit existing files across all projects. Chec
 
 * Change pom code to check licence in pom against the LICENCE file in the top level of the project (created by Github).
 
-* Put the version catalog into a yaml file. (Maybe not, might want logic depending on how to handle different dependency versions
-related to Java version, e.g. Mockito capped at 4.x.x if using Java 8. See below.)
-
-* Change version catalog (or use thereof) to provide different versions depending on the Java version. For example,
-Mockito capped at 4.x.x for Java 8. Jackson too, 3.0.0 needs Java 17. 
-https://docs.gradle.org/9.5.0/userguide/variant_aware_resolution.html
-
 * Figure out why sometimes incompatible Gradle daemons are running.
 
 * Try using Develocity or similar scanning tools.
@@ -37,3 +30,5 @@ https://docs.gradle.org/9.5.0/userguide/variant_aware_resolution.html
 * Create (or find) task to report on dependencies that have a newer version available.
 https://galler.dev/keeping-dependencies-up-to-date-in-gradle-toml-files/
 
+* Fix project encodings. All should default to UTF-8 in Eclipse as well as command line.
+https://stackoverflow.com/questions/72692978/eclipse-project-project-name-has-no-explicit-encoding-set

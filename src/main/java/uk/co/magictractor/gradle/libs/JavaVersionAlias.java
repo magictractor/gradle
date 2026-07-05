@@ -26,6 +26,12 @@ public class JavaVersionAlias {
     private static final int CATCH_ALL_JAVA_LANGUAGE_VERSION = 99;
 
     public static JavaVersionAlias of(String catalogAlias) {
+        if (catalogAlias.indexOf('-') >= 0) {
+            // Useful guard against bad test data.
+            // The hyphens in the .toml have already been converted (where?).
+            throw new IllegalArgumentException("catalogAlias must not contain hyphens, is \"" + catalogAlias + "\"");
+        }
+
         int lastDotIndex = catalogAlias.lastIndexOf('.');
 
         if (lastDotIndex >= 0) {
@@ -99,18 +105,23 @@ public class JavaVersionAlias {
 
     @Override
     public String toString() {
-        //        return MoreObjects.toStringHelper(this)
-        //                .add("normalisedAlias", normalisedAlias)
-        //                .add("uptoJavaVersion", uptoJavaVersion)
-        //                .toString();
-        //        "JavaVersionAlias{normalisedAlias=mockito, uptoJavaVersion=10}
-        return new StringBuilder().append(getClass().getSimpleName())
-                .append("{normalisedAlias=")
-                .append(normalisedAlias)
-                .append(", uptoJavaVersion=")
-                .append(uptoJavaVersion)
-                .append('}')
-                .toString();
+        StringBuilder sb = new StringBuilder();
+        sb.append(getClass().getSimpleName());
+        if (isCatchAll()) {
+            sb.append("{alias=");
+            sb.append(normalisedAlias);
+        }
+        else {
+            sb.append("{normalisedAlias=");
+            sb.append(normalisedAlias);
+            sb.append(", catalogAlias=");
+            sb.append(catalogAlias);
+            sb.append(", uptoJavaVersion=");
+            sb.append(uptoJavaVersion);
+        }
+        sb.append('}');
+
+        return sb.toString();
     }
 
 }

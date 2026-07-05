@@ -15,93 +15,68 @@
  */
 package uk.co.magictractor.gradle.libs;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.jupiter.api.Test;
+
 public class JavaVersionAliasMapTest {
 
-    //    @Test
-    //    public void testAliasesForJavaVersion_noAlts() {
-    //        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
-    //        map.put("guava", "33.6.0-jre");
-    //
-    //        assertThat(map.aliasesForJavaVersion(17)).containsExactly("guava");
-    //        assertThat(map.aliasesForJavaVersion(8)).containsExactly("guava");
-    //    }
-    //
-    //    @Test
-    //    public void testAliasesForJavaVersion_oneAlt() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //        map.put("mockito.java8");
-    //        map.put("mockito");
-    //
-    //        assertThat(map.aliasesForJavaVersion(17)).containsExactly("mockito");
-    //        assertThat(map.aliasesForJavaVersion(8)).containsExactly("mockito.java8");
-    //        assertThat(map.aliasesForJavaVersion(9)).containsExactly("mockito");
-    //        assertThat(map.aliasesForJavaVersion(7)).containsExactly("mockito.java8");
-    //        assertThat(map.aliasesForJavaVersion(1)).containsExactly("mockito.java8");
-    //    }
-    //
-    //    @Test
-    //    public void testAliasesForJavaVersion_twoAlts() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //        // Shuffled order here.
-    //        map.put("mockito.java16");
-    //        map.put("mockito");
-    //        map.put("mockito.java10");
-    //
-    //        assertThat(map.aliasesForJavaVersion(25)).containsExactly("mockito");
-    //        assertThat(map.aliasesForJavaVersion(17)).containsExactly("mockito");
-    //        assertThat(map.aliasesForJavaVersion(16)).containsExactly("mockito.java16");
-    //        assertThat(map.aliasesForJavaVersion(11)).containsExactly("mockito.java16");
-    //        assertThat(map.aliasesForJavaVersion(10)).containsExactly("mockito.java10");
-    //        assertThat(map.aliasesForJavaVersion(8)).containsExactly("mockito.java10");
-    //        assertThat(map.aliasesForJavaVersion(1)).containsExactly("mockito.java10");
-    //    }
-    //
-    //    @Test
-    //    public void testAliasesForJavaVersion_noMatch() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //        map.put("mockito.java10");
-    //
-    //        assertThatThrownBy(() -> map.aliasesForJavaVersion(11))
-    //                .isExactlyInstanceOf(IllegalStateException.class)
-    //                .hasMessage("Aliases for mockito are only specified up to Java version 10");
-    //    }
-    //
-    //    @Test
-    //    public void testAliasesForJavaVersion_noCatchAll() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //        map.put("mockito.java10");
-    //
-    //        // Here there's a match, but no catch all
-    //        assertThat(map.aliasesForJavaVersion(8)).containsExactly("mockito.java10");
-    //
-    //        // TODO! check logged messages - create an Extension in util project?
-    //    }
-    //
-    //    @Test
-    //    public void testAdd_duplicate() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //        map.put("guava");
-    //
-    //        assertThatThrownBy(() -> map.put("guava"))
-    //                .isExactlyInstanceOf(IllegalArgumentException.class)
-    //                .hasMessage("Already have value matching JavaVersionAlias{normalisedAlias=guava, uptoJavaVersion=99}");
-    //    }
-    //
-    //    @Test
-    //    public void testJavaVersionBoundaries_empty() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //
-    //        assertThat(map.getJavaVersionBoundaries()).isEmpty();
-    //    }
-    //
-    //    @Test
-    //    public void testJavaVersionBoundaries() {
-    //        JavaVersionAliasMap map = new JavaVersionAliasMap();
-    //        map.put("mockito.java16");
-    //        map.put("mockito");
-    //        map.put("mockito.java10");
-    //
-    //        assertThat(map.getJavaVersionBoundaries()).containsExactly(99, 16, 10);
-    //    }
+    @Test
+    public void test() {
+        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        map.put("mockito", "5.23.0");
+        map.put("mockito.java16", "4.11.0");
+
+        assertThat(map.keySet()).hasSize(1);
+
+        assertThat(map.valueForJavaVersion("mockito", 8)).isEqualTo("4.11.0");
+        assertThat(map.valueForJavaVersion("mockito", 16)).isEqualTo("4.11.0");
+        assertThat(map.valueForJavaVersion("mockito", 17)).isEqualTo("5.23.0");
+        assertThat(map.valueForJavaVersion("mockito", 25)).isEqualTo("5.23.0");
+    }
+
+    @Test
+    public void t2() {
+        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        map.put("junit", "6.1.1");
+        map.put("junit.platform", "6.1.1");
+        map.put("junit.java16", "5.14.4");
+        map.put("junit.platform.java16", "1.14.4");
+
+        assertThat(map.keySet()).hasSize(2);
+
+        assertThat(map.valueForJavaVersion("junit", 8)).isEqualTo("5.14.4");
+        assertThat(map.valueForJavaVersion("junit", 16)).isEqualTo("5.14.4");
+        assertThat(map.valueForJavaVersion("junit", 17)).isEqualTo("6.1.1");
+        assertThat(map.valueForJavaVersion("junit", 25)).isEqualTo("6.1.1");
+
+        assertThat(map.valueForJavaVersion("junit.platform", 8)).isEqualTo("1.14.4");
+        assertThat(map.valueForJavaVersion("junit.platform", 16)).isEqualTo("1.14.4");
+        assertThat(map.valueForJavaVersion("junit.platform", 17)).isEqualTo("6.1.1");
+        assertThat(map.valueForJavaVersion("junit.platform", 25)).isEqualTo("6.1.1");
+    }
+
+    @Test
+    public void test_noCatchAll() {
+        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        map.put("mockito.java16", "4.11.0");
+
+        assertThat(map.valueForJavaVersion("mockito", 16)).isEqualTo("4.11.0");
+        assertThatThrownBy(() -> map.valueForJavaVersion("mockito", 17))
+                .isExactlyInstanceOf(IllegalStateException.class)
+                .hasMessage("Aliases for \"mockito\" are only specified up to Java version 16");
+    }
+
+    @Test
+    public void test_putDuplicate() {
+        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        map.put("mockito.java16", "4.11.0");
+        // TODO! check warning was logged
+
+        assertThatThrownBy(() -> map.put("mockito.java16", "4.11.0"))
+                .isExactlyInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Already have value matching \"mockito.java16\"");
+    }
 
 }

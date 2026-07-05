@@ -134,31 +134,29 @@ public class ReconciledLibrariesBuilder {
 
     // Property must be used because the MagicTractorExtension is not populated until later.
     public ReconciledLibs build(Property<Integer> javaVersion) {
-        Provider<Map<String, DependencyModel>> a = javaVersion.map(librariesMap::aliasesForJavaVersion);
-        Map<String, Provider<String>> d = new HashMap<>();
+        Map<String, Provider<String>> reconciledLibsMap = new HashMap<>();
         for (String libraryAlias : librariesMap.keySet()) {
-            Provider<String> libraryProvider = a.map(m -> dependencyString(m.get(libraryAlias), javaVersion));
-            d.put(libraryAlias, libraryProvider);
+            Provider<String> libraryProvider = javaVersion
+                    .map(v -> dependencyString(librariesMap.valueForJavaVersion(libraryAlias, v), v));
+            reconciledLibsMap.put(libraryAlias, libraryProvider);
         }
 
-        return objectFactory.newInstance(ReconciledLibs.class, d);
+        return objectFactory.newInstance(ReconciledLibs.class, reconciledLibsMap);
     }
 
-    private String dependencyString(DependencyModel dependencyModel, Property<Integer> javaVersion) {
+    private String dependencyString(DependencyModel dependencyModel, int javaVersion) {
         StringBuilder sb = new StringBuilder(64);
         sb.append(dependencyModel.getGroup());
         sb.append(':');
         sb.append(dependencyModel.getName());
         sb.append(':');
         if (dependencyModel.getVersionRef() != null) {
-            VersionModel versionModel = versionsMap.aliasesForJavaVersion(javaVersion.get()).get(dependencyModel.getVersionRef());
+            VersionModel versionModel = versionsMap.valueForJavaVersion(dependencyModel.getVersionRef(), javaVersion);
             sb.append(versionModel.getVersion());
         }
         else {
             throw new UnsupportedOperationException("TODO");
         }
-
-        System.out.println("dependencyString -> " + sb.toString());
 
         return sb.toString();
     }

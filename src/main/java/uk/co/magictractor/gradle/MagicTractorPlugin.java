@@ -17,11 +17,9 @@ package uk.co.magictractor.gradle;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.initialization.Settings;
-import org.gradle.api.internal.catalog.ExternalModuleDependencyFactory;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -176,25 +174,24 @@ public class MagicTractorPlugin implements Plugin<Project> {
     private void configureDefaultDependencies(MagicTractorExtension mte) {
         Project project = mte.getProject();
         DependencyHandler dependencyHandler = project.getDependencies();
-        // TODO! reconciledLibs once it is available
-        ExternalModuleDependencyFactory versionCatalog = (ExternalModuleDependencyFactory) project.getExtensions().findByName("magictractorLibs");
+        ReconciledLibs reconciledLibs = project.getExtensions().findByType(ReconciledLibs.class);
 
         // Logging libs.
-        addDependency(dependencyHandler, versionCatalog, "implementation", "slf4j-api");
-        addDependency(dependencyHandler, versionCatalog, "runtimeOnly", "logback.classic");
+        addDependency(dependencyHandler, reconciledLibs, "implementation", "slf4j.api");
+        addDependency(dependencyHandler, reconciledLibs, "runtimeOnly", "logback.classic");
 
         // Unit testing libs.
-        addDependency(dependencyHandler, versionCatalog, "testImplementation", "junit-jupiter");
-        addDependency(dependencyHandler, versionCatalog, "testRuntimeOnly", "junit-jupiter-platform");
-        addDependency(dependencyHandler, versionCatalog, "testImplementation", "assertj");
+        addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit.jupiter");
+        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.jupiter.platform");
+        addDependency(dependencyHandler, reconciledLibs, "testImplementation", "assertj");
     }
 
     private void addDependency(DependencyHandler dependencyHandler,
-            ExternalModuleDependencyFactory versionCatalog,
+            ReconciledLibs reconciledLibs,
             String configurationName,
-            String alias) {
+            String normalisedAlias) {
 
-        MinimalExternalModuleDependency dependency = versionCatalog.create(alias).get();
+        Provider<String> dependency = reconciledLibs.getDependency(normalisedAlias);
         dependencyHandler.add(configurationName, dependency);
     }
 

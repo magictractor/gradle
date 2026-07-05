@@ -53,6 +53,11 @@ public abstract class ReconciledLibs implements DynamicObjectAware {
         return dynamicObject;
     }
 
+    @SuppressWarnings("unchecked")
+    public Provider<String> getDependency(String normalisedAlias) {
+        return (Provider<String>) dynamicObject.getExtensions().getByName(normalisedAlias);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder()
