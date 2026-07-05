@@ -182,7 +182,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
         // Unit testing libs.
         addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit.jupiter");
-        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.jupiter.platform");
+        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.jupiterPlatform");
         addDependency(dependencyHandler, reconciledLibs, "testImplementation", "assertj");
     }
 

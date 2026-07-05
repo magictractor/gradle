@@ -37,7 +37,8 @@ mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit-jupiter-platform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+# TODO! restore junit-jupiter-platform, needs ReconciledLibs to also be a Provider (and junitPlatform-java16 below)
+junit-jupiterPlatform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 

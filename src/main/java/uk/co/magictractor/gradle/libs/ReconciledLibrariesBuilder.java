@@ -16,8 +16,10 @@
 package uk.co.magictractor.gradle.libs;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -135,10 +137,57 @@ public class ReconciledLibrariesBuilder {
     // Property must be used because the MagicTractorExtension is not populated until later.
     public ReconciledLibs build(Property<Integer> javaVersion) {
         Map<String, Provider<String>> reconciledLibsMap = new HashMap<>();
-        for (String libraryAlias : librariesMap.keySet()) {
-            Provider<String> libraryProvider = javaVersion
-                    .map(v -> dependencyString(librariesMap.valueForJavaVersion(libraryAlias, v), v));
-            reconciledLibsMap.put(libraryAlias, libraryProvider);
+
+        for (String normalisedAlias : librariesMap.keySet()) {
+            Provider<String> dependencyProvider = javaVersion
+                    .map(v -> dependencyString(librariesMap.valueForJavaVersion(normalisedAlias, v), v));
+            reconciledLibsMap.put(normalisedAlias, dependencyProvider);
+        }
+
+        return build(reconciledLibsMap);
+    }
+
+    private ReconciledLibs build(Map<String, Provider<String>> subLibsMap) {
+        Map<String, Object> reconciledLibsMap = new HashMap<>();
+
+        Set<String> providerKeys = new HashSet<>();
+        Set<String> subGroupKeys = new HashSet<>();
+
+        for (String libraryAlias : subLibsMap.keySet()) {
+            int dotIndex = libraryAlias.indexOf('.');
+            if (dotIndex == -1) {
+                providerKeys.add(libraryAlias);
+            }
+            else {
+                subGroupKeys.add(libraryAlias.substring(0, dotIndex));
+            }
+        }
+
+        if (!providerKeys.isEmpty() && !subGroupKeys.isEmpty()) {
+            HashSet<String> intersection = new HashSet<>(subGroupKeys);
+            intersection.retainAll(providerKeys);
+            if (!intersection.isEmpty()) {
+                // Aah... this is where we want a prefix... "Change uses of [jupiter]", but lib could also implement provider??
+                throw new IllegalArgumentException("A key may not be used for both a subgroup and a dependency. Change uses of " + intersection
+                        + " or (better) change ReconciledLibs to also be a Provider.");
+            }
+        }
+
+        for (String providerKey : providerKeys) {
+            reconciledLibsMap.put(providerKey, subLibsMap.get(providerKey));
+        }
+
+        for (String subGroupKey : subGroupKeys) {
+            Map<String, Provider<String>> subMap = new HashMap<>();
+            String subGroupPrefix = subGroupKey + ".";
+            for (Map.Entry<String, Provider<String>> subLibsEntry : subLibsMap.entrySet()) {
+                if (subLibsEntry.getKey().startsWith(subGroupPrefix)) {
+                    subMap.put(subLibsEntry.getKey().substring(subGroupPrefix.length()), subLibsEntry.getValue());
+                }
+            }
+
+            ReconciledLibs subGroup = build(subMap);
+            reconciledLibsMap.put(subGroupKey, subGroup);
         }
 
         return objectFactory.newInstance(ReconciledLibs.class, reconciledLibsMap);

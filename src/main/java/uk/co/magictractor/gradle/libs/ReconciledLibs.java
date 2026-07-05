@@ -38,8 +38,13 @@ public abstract class ReconciledLibs implements DynamicObjectAware {
 
     private final ExtensibleDynamicObject dynamicObject;
 
+    // Map values are Provider<String> or nested ReconciledLibs.
     @Inject
-    public ReconciledLibs(Map<String, Provider<String>> map, InstanceGenerator instanceGenerator) {
+    public ReconciledLibs(Map<String, Object> map, InstanceGenerator instanceGenerator) {
+        if (map.isEmpty()) {
+            throw new IllegalArgumentException("map must not be empty");
+        }
+
         dynamicObject = new ExtensibleDynamicObject(this, getClass(), instanceGenerator);
 
         ExtensionContainer extensions = dynamicObject.getExtensions();
@@ -55,6 +60,17 @@ public abstract class ReconciledLibs implements DynamicObjectAware {
 
     @SuppressWarnings("unchecked")
     public Provider<String> getDependency(String normalisedAlias) {
+        int dotIndex = normalisedAlias.indexOf('.');
+        if (dotIndex >= 0) {
+            ReconciledLibs subLibs = (ReconciledLibs) dynamicObject.getExtensions().getByName(normalisedAlias.substring(0, dotIndex));
+            return subLibs.getDependency(normalisedAlias.substring(dotIndex + 1));
+        }
+
+        // temp
+        if (dynamicObject.getExtensions().getByName(normalisedAlias) instanceof ReconciledLibs) {
+            throw new IllegalStateException("Expected " + normalisedAlias + " to be a Provider");
+        }
+
         return (Provider<String>) dynamicObject.getExtensions().getByName(normalisedAlias);
     }
 
@@ -62,7 +78,7 @@ public abstract class ReconciledLibs implements DynamicObjectAware {
     public String toString() {
         StringBuilder sb = new StringBuilder()
                 .append(getClass().getSimpleName())
-                .append('{');
+                .append("{keys=");
 
         boolean first = true;
         for (ExtensionSchema schema : dynamicObject.getExtensions().getExtensionsSchema().getElements()) {
