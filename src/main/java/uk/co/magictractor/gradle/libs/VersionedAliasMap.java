@@ -43,7 +43,7 @@ public class VersionedAliasMap<V> {
     }
 
     private void put(VersionedAlias alias, V value) {
-        TreeMap<VersionedAlias, V> v = aliases.computeIfAbsent(alias.getNormalisedAlias(), _ -> new TreeMap<>(JAVA_VERSION_ALIAS_COMPARATOR));
+        TreeMap<VersionedAlias, V> v = aliases.computeIfAbsent(alias.getNormalisedAlias(), key -> new TreeMap<>(JAVA_VERSION_ALIAS_COMPARATOR));
         if (v.containsKey(alias)) {
             throw new IllegalArgumentException("Already have value matching \"" + alias.getCatalogAlias() + "\"");
         }

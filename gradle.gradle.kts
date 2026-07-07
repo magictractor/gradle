@@ -90,10 +90,8 @@ java {
         // Gradle 9.0.0 code needs Java 17.
         // https://docs.gradle.org/9.0.0/release-notes.html#jvm-17
         //
-        // Working with the new Class-File API (JEP 484) needs Java 24+.
-        //
-        // Projects using this may use toolchains with earlier versions.
-        languageVersion = JavaLanguageVersion.of(25)
+        // Projects using this plugin may use toolchains with earlier versions.
+        languageVersion = JavaLanguageVersion.of(17)
     }
     
     withSourcesJar()

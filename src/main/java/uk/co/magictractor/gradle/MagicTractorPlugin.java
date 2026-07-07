@@ -72,7 +72,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
         configureDefaultDependencies(mte);
         configurePublishingExtension(mte);
 
-        project.afterEvaluate(_ -> {
+        project.afterEvaluate(p -> {
             //configureReconciledLibraries(mte);
         });
     }
