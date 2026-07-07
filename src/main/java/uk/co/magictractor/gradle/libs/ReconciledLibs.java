@@ -16,14 +16,13 @@
 package uk.co.magictractor.gradle.libs;
 
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
-import org.gradle.api.artifacts.VersionConstraint;
 import org.gradle.api.internal.DynamicObjectAware;
-import org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtensionsSchema.ExtensionSchema;
 import org.gradle.api.provider.Provider;
@@ -40,17 +39,13 @@ import org.gradle.internal.metaobject.DynamicObject;
  */
 // TODO! rather than always inheriting from DefaultExternalModuleDependency it could
 // be added to the DynamicObject.
-public class ReconciledLibs extends DefaultExternalModuleDependency implements DynamicObjectAware {
+public class ReconciledLibs implements DynamicObjectAware {
 
     private final ExtensibleDynamicObject dynamicObject;
-
-    private transient MinimalExternalModuleDependency dependency;
 
     // Map values are Provider<MinimalExternalModuleDependency> or nested ReconciledLibs.
     @Inject
     public ReconciledLibs(Map<String, Object> map, InstanceGenerator instanceGenerator) {
-        super("placeholderGroup", "placeholderName", "placeholderVersion");
-
         if (map.isEmpty()) {
             throw new IllegalArgumentException("map must not be empty");
         }
@@ -61,6 +56,10 @@ public class ReconciledLibs extends DefaultExternalModuleDependency implements D
         for (var entry : map.entrySet()) {
             extensions.add(entry.getKey(), entry.getValue());
         }
+    }
+
+    public boolean isDependency() {
+        return false;
     }
 
     @Override
@@ -77,51 +76,17 @@ public class ReconciledLibs extends DefaultExternalModuleDependency implements D
         }
 
         if (dynamicObject.getExtensions().getByName(normalisedAlias) instanceof ReconciledLibs) {
-            // Has a value and children, like junit.jupiter and junit.jupiter.platform
+            // Has a value and children, like junit and junit.platform
             ReconciledLibs lib = (ReconciledLibs) dynamicObject.getExtensions().getByName(normalisedAlias);
-            return (Provider<MinimalExternalModuleDependency>) lib.dynamicObject.getExtensions().getByName("_this");
+            return lib.getDependencyProvider();
         }
 
         return (Provider<MinimalExternalModuleDependency>) dynamicObject.getExtensions().getByName(normalisedAlias);
     }
 
-    @Override
-    public String getGroup() {
-        ensureDependency();
-        return dependency.getGroup();
-    }
-
-    @Override
-    public String getName() {
-        ensureDependency();
-        return dependency.getName();
-    }
-
-    @Override
-    public String getVersion() {
-        ensureDependency();
-        return dependency.getVersion();
-    }
-
-    @Override
-    public ModuleIdentifier getModule() {
-        ensureDependency();
-        return dependency.getModule();
-    }
-
-    @Override
-    public VersionConstraint getVersionConstraint() {
-        ensureDependency();
-        return dependency.getVersionConstraint();
-    }
-
-    private void ensureDependency() {
-        if (dependency != null) {
-            return;
-        }
-
-        Provider<MinimalExternalModuleDependency> provider = (Provider<MinimalExternalModuleDependency>) dynamicObject.getExtensions().getByName("_this");
-        dependency = provider.get();
+    @SuppressWarnings("unchecked")
+    protected Provider<MinimalExternalModuleDependency> getDependencyProvider() {
+        return (Provider<MinimalExternalModuleDependency>) dynamicObject.getExtensions().getByName("_this");
     }
 
     @Override
@@ -130,18 +95,15 @@ public class ReconciledLibs extends DefaultExternalModuleDependency implements D
                 .append(getClass().getSimpleName())
                 .append("{keys=");
 
-        boolean first = true;
-        for (ExtensionSchema schema : dynamicObject.getExtensions().getExtensionsSchema().getElements()) {
-            if (schema.getName().equals("ext")) {
-                continue;
-            }
-            if (first) {
-                first = false;
-            }
-            else {
-                sb.append(", ");
-            }
-            sb.append(schema.getName());
+        String keys = StreamSupport.stream(dynamicObject.getExtensions().getExtensionsSchema().getElements().spliterator(), false)
+                .map(ExtensionSchema::getName)
+                .filter(name -> !"ext".equals(name))
+                .sorted()
+                .collect(Collectors.joining(", ", "[", "]"));
+        sb.append(keys);
+
+        if (isDependency()) {
+            sb.append(", isDependency=true");
         }
 
         sb.append('}');

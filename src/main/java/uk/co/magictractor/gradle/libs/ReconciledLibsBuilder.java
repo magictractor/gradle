@@ -229,7 +229,9 @@ public class ReconciledLibsBuilder {
             reconciledLibsMap.put(subGroupKey, subGroup);
         }
 
-        return project.getObjects().newInstance(ReconciledLibs.class, reconciledLibsMap);
+        boolean isDependency = reconciledLibsMap.containsKey("_this");
+        Class<? extends ReconciledLibs> libsClass = isDependency ? ReconciledLibsWithDependency.class : ReconciledLibs.class;
+        return project.getObjects().newInstance(libsClass, reconciledLibsMap);
     }
 
 }
