@@ -164,8 +164,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
      *      // Logger implementation for unit tests.
      *      runtimeOnly(libs.logback.classic)
      *
-     *      testImplementation(libs.junit.jupiter)
-     *      testRuntimeOnly(libs.junit.jupiter.platform)
+     *      testImplementation(libs.junit)
+     *      testRuntimeOnly(libs.junit.platform)
      *      testImplementation(libs.assertj)
      *  }
      *  </pre>
@@ -180,8 +180,8 @@ public class MagicTractorPlugin implements Plugin<Project> {
         addDependency(dependencyHandler, reconciledLibs, "runtimeOnly", "logback.classic");
 
         // Unit testing libs.
-        addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit.jupiter");
-        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.jupiter.platform");
+        addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit");
+        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.platform");
         addDependency(dependencyHandler, reconciledLibs, "testImplementation", "assertj");
     }
 

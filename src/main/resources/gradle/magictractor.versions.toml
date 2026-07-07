@@ -34,10 +34,10 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 
 # Testing
-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 # From JUnit 6 junit-platform version matches junit version
-junit-jupiter-platform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
-junit-jupiter-platform-java16 = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform-java16" }
+junit-platform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
+junit-platform-java16 = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform-java16" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 
