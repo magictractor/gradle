@@ -170,8 +170,13 @@ public class ReconciledLibsBuilder {
 
         ImmutableVersionConstraint version;
         if (dependencyModel.getVersionRef() != null) {
-            VersionModel versionModel = versionsMap.valueForJavaVersion(dependencyModel.getVersionRef(), javaVersion);
+            // versionRef may include a "-javaNN" suffix,
+            // typically used when the library and version refs are not used in later Java versions.
+            JavaVersionAlias versionRefAlias = JavaVersionAlias.of(dependencyModel.getVersionRef());
+            VersionModel versionModel = versionsMap.valueForJavaVersion(versionRefAlias.getNormalisedAlias(), javaVersion);
             version = versionModel.getVersion();
+
+            // TODO! there should probably be additional checks or filters if versionRefAlias is not a catch-all
         }
         else {
             throw new UnsupportedOperationException("TODO");
