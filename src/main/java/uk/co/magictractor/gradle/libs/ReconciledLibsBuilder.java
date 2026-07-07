@@ -21,10 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.initialization.resolve.MutableVersionCatalogContainer;
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
+import org.gradle.api.internal.artifacts.dependencies.DefaultMinimalDependency;
+import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
 import org.gradle.api.internal.catalog.DefaultVersionCatalog;
 import org.gradle.api.internal.catalog.DependencyModel;
 import org.gradle.api.internal.catalog.VersionModel;
@@ -140,7 +144,7 @@ public class ReconciledLibsBuilder {
     // Property must be used as a parameter because the MagicTractorExtension is typically not populated until after
     // ReconciledLibs has been built from Plugin.apply().
     public ReconciledLibs build(Property<Integer> javaVersion) {
-        Map<String, Provider<String>> reconciledLibsMap = new HashMap<>();
+        Map<String, Provider<MinimalExternalModuleDependency>> reconciledLibsMap = new HashMap<>();
 
         for (String normalisedAlias : librariesMap.keySet()) {
             // A new transform is used rather than mapping javaVersion.
@@ -148,7 +152,7 @@ public class ReconciledLibsBuilder {
             // as when setting up default dependencies and javaVersion is still null
             // (not wired yet) then the transformed value is also null and the transform
             // is not called.
-            Provider<String> dependencyProvider = project.provider(() -> lookupDependency(normalisedAlias, javaVersion));
+            Provider<MinimalExternalModuleDependency> dependencyProvider = project.provider(() -> lookupDependency(normalisedAlias, javaVersion));
 
             reconciledLibsMap.put(normalisedAlias, dependencyProvider);
         }
@@ -156,37 +160,34 @@ public class ReconciledLibsBuilder {
         return build(reconciledLibsMap);
     }
 
-    private String lookupDependency(String normalisedAlias, Property<Integer> javaVersionProperty) {
+    private MinimalExternalModuleDependency lookupDependency(String normalisedAlias, Property<Integer> javaVersionProperty) {
         if (!javaVersionProperty.isPresent()) {
-            String message = "javaVersion Property has not been set, ReconciledLib is possibly being used too soon";
-            //System.out.println("javaVersion");
-            //throw new IllegalStateException(message);
-
-            System.out.println(message);
-
-            throw new GradleException(message);
+            throw new IllegalStateException("javaVersion Property has not been set, ReconciledLib is possibly being used too soon");
         }
 
         int javaVersion = javaVersionProperty.get();
         DependencyModel dependencyModel = librariesMap.valueForJavaVersion(normalisedAlias, javaVersion);
 
-        StringBuilder sb = new StringBuilder(64);
-        sb.append(dependencyModel.getGroup());
-        sb.append(':');
-        sb.append(dependencyModel.getName());
-        sb.append(':');
+        ImmutableVersionConstraint version;
         if (dependencyModel.getVersionRef() != null) {
             VersionModel versionModel = versionsMap.valueForJavaVersion(dependencyModel.getVersionRef(), javaVersion);
-            sb.append(versionModel.getVersion());
+            version = versionModel.getVersion();
         }
         else {
             throw new UnsupportedOperationException("TODO");
         }
 
-        return sb.toString();
+        // The mapping to a ModuleDependency is usually done in AbstractExternalDependencyFactory which
+        // is extended by the generated LibrariesForXxx classes. However, the LibrariesForXxx classes
+        // might not contain the appropriate library version.
+        //
+        // See AbstractExternalDependencyFactory.create().
+        return new DefaultMinimalDependency(
+            DefaultModuleIdentifier.newId(dependencyModel.getGroup(), dependencyModel.getName()),
+            new DefaultMutableVersionConstraint(version));
     }
 
-    private ReconciledLibs build(Map<String, Provider<String>> subLibsMap) {
+    private ReconciledLibs build(Map<String, Provider<MinimalExternalModuleDependency>> subLibsMap) {
         Map<String, Object> reconciledLibsMap = new HashMap<>();
 
         Set<String> providerKeys = new HashSet<>();
@@ -207,9 +208,9 @@ public class ReconciledLibsBuilder {
         }
 
         for (String subGroupKey : subGroupKeys) {
-            Map<String, Provider<String>> subMap = new HashMap<>();
+            Map<String, Provider<MinimalExternalModuleDependency>> subMap = new HashMap<>();
             String subGroupPrefix = subGroupKey + ".";
-            for (Map.Entry<String, Provider<String>> subLibsEntry : subLibsMap.entrySet()) {
+            for (var subLibsEntry : subLibsMap.entrySet()) {
                 if (subLibsEntry.getKey().startsWith(subGroupPrefix)) {
                     subMap.put(subLibsEntry.getKey().substring(subGroupPrefix.length()), subLibsEntry.getValue());
                 }

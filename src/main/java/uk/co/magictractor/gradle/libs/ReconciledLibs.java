@@ -19,10 +19,11 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import org.gradle.api.artifacts.MinimalExternalModuleDependency;
+import org.gradle.api.artifacts.ModuleIdentifier;
 import org.gradle.api.artifacts.VersionConstraint;
 import org.gradle.api.internal.DynamicObjectAware;
 import org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency;
-import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConstraint;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtensionsSchema.ExtensionSchema;
 import org.gradle.api.provider.Provider;
@@ -43,11 +44,9 @@ public class ReconciledLibs extends DefaultExternalModuleDependency implements D
 
     private final ExtensibleDynamicObject dynamicObject;
 
-    private transient String group = null;
-    private transient String name = null;
-    private transient String version = null;
+    private transient MinimalExternalModuleDependency dependency;
 
-    // Map values are Provider<String> or nested ReconciledLibs.
+    // Map values are Provider<MinimalExternalModuleDependency> or nested ReconciledLibs.
     @Inject
     public ReconciledLibs(Map<String, Object> map, InstanceGenerator instanceGenerator) {
         super("placeholderGroup", "placeholderName", "placeholderVersion");
@@ -70,7 +69,7 @@ public class ReconciledLibs extends DefaultExternalModuleDependency implements D
     }
 
     @SuppressWarnings("unchecked")
-    public Provider<String> getDependency(String normalisedAlias) {
+    public Provider<MinimalExternalModuleDependency> getDependency(String normalisedAlias) {
         int dotIndex = normalisedAlias.indexOf('.');
         if (dotIndex >= 0) {
             ReconciledLibs subLibs = (ReconciledLibs) dynamicObject.getExtensions().getByName(normalisedAlias.substring(0, dotIndex));
@@ -80,55 +79,49 @@ public class ReconciledLibs extends DefaultExternalModuleDependency implements D
         if (dynamicObject.getExtensions().getByName(normalisedAlias) instanceof ReconciledLibs) {
             // Has a value and children, like junit.jupiter and junit.jupiter.platform
             ReconciledLibs lib = (ReconciledLibs) dynamicObject.getExtensions().getByName(normalisedAlias);
-            return (Provider<String>) lib.dynamicObject.getExtensions().getByName("_this");
+            return (Provider<MinimalExternalModuleDependency>) lib.dynamicObject.getExtensions().getByName("_this");
         }
 
-        return (Provider<String>) dynamicObject.getExtensions().getByName(normalisedAlias);
+        return (Provider<MinimalExternalModuleDependency>) dynamicObject.getExtensions().getByName(normalisedAlias);
     }
 
     @Override
     public String getGroup() {
         ensureDependency();
-        return group;
+        return dependency.getGroup();
     }
 
     @Override
     public String getName() {
         ensureDependency();
-        return name;
+        return dependency.getName();
     }
 
     @Override
     public String getVersion() {
         ensureDependency();
-        return version;
+        return dependency.getVersion();
+    }
+
+    @Override
+    public ModuleIdentifier getModule() {
+        ensureDependency();
+        return dependency.getModule();
     }
 
     @Override
     public VersionConstraint getVersionConstraint() {
-        // Ick. More evidence that Providers should be switched to return a Dependency or DependencyModel.
-        return new DefaultMutableVersionConstraint(version);
+        ensureDependency();
+        return dependency.getVersionConstraint();
     }
 
     private void ensureDependency() {
-        if (group != null) {
+        if (dependency != null) {
             return;
         }
 
-        // TODO! rather than creating a String and then parsing it
-        // the provider could/should be changed to Provider<Dependency> or Provider<DependencyModel>
-        Provider<String> provider = (Provider<String>) dynamicObject.getExtensions().getByName("_this");
-        String dependency = provider.get();
-
-        int colonIndex1 = dependency.indexOf(":");
-        int colonIndex2 = dependency.indexOf(":", colonIndex1 + 1);
-        if (dependency.indexOf(':', colonIndex2 + 1) >= 0) {
-            throw new IllegalStateException("Expected exactly two colons in \"" + dependency + "\"");
-        }
-
-        group = dependency.substring(0, colonIndex1);
-        name = dependency.substring(colonIndex1 + 1, colonIndex2);
-        version = dependency.substring(colonIndex2 + 1);
+        Provider<MinimalExternalModuleDependency> provider = (Provider<MinimalExternalModuleDependency>) dynamicObject.getExtensions().getByName("_this");
+        dependency = provider.get();
     }
 
     @Override

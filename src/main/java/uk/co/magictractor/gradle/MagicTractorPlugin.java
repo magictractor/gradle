@@ -15,10 +15,9 @@
  */
 package uk.co.magictractor.gradle;
 
-import java.lang.reflect.Method;
-
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.plugins.JavaPluginExtension;
@@ -31,8 +30,8 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
-import uk.co.magictractor.gradle.libs.ReconciledLibsBuilder;
 import uk.co.magictractor.gradle.libs.ReconciledLibs;
+import uk.co.magictractor.gradle.libs.ReconciledLibsBuilder;
 
 /**
  * <p>
@@ -191,7 +190,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
             String configurationName,
             String normalisedAlias) {
 
-        Provider<String> dependency = reconciledLibs.getDependency(normalisedAlias);
+        Provider<MinimalExternalModuleDependency> dependency = reconciledLibs.getDependency(normalisedAlias);
         dependencyHandler.add(configurationName, dependency);
     }
 
