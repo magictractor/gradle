@@ -9,6 +9,7 @@ is much better than in Eclipse. Eclipse support appears dead https://github.com/
 for me (a Kotlin novice). Maybe faster too. If importing Gradle rather than using gradleApi() can maybe remove
 the hackery to get the Gradle source included in Eclipse.
 https://mbonnin.net/2025-07-10_the_case_against_kotlin_dsl/
+https://docs.gradle.org/current/userguide/kotlin_dsl.html
 
 * Change licence file header to use "Copyright the original authors..." text used by some libs (all projects).
 Have changed template, but want to edit existing files across all projects. Checkstyle?
