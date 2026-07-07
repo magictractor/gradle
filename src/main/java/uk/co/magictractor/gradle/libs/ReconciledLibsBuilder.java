@@ -108,14 +108,14 @@ import uk.co.magictractor.gradle.MagicTractorSettingsPlugin;
  * {@code ~\.gradle\caches\{gradle.version}\dependencies-accessors\{uuid}\sources\org\gradle\accessors\dm}.
  * <p>
  */
-public class ReconciledLibrariesBuilder {
+public class ReconciledLibsBuilder {
 
     private final Project project;
 
     private final JavaVersionAliasMap<VersionModel> versionsMap = new JavaVersionAliasMap<>();
     private final JavaVersionAliasMap<DependencyModel> librariesMap = new JavaVersionAliasMap<>();
 
-    public ReconciledLibrariesBuilder(Project project) {
+    public ReconciledLibsBuilder(Project project) {
         this.project = project;
 
         // TODO! fallback to reflection on LibrariesForXxx (or other) if MagicTractorSettingsPlugin is not used.

@@ -31,7 +31,7 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
-import uk.co.magictractor.gradle.libs.ReconciledLibrariesBuilder;
+import uk.co.magictractor.gradle.libs.ReconciledLibsBuilder;
 import uk.co.magictractor.gradle.libs.ReconciledLibs;
 
 /**
@@ -137,7 +137,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
     private void configureReconciledLibraries(MagicTractorExtension mte) {
         Project project = mte.getProject();
 
-        ReconciledLibrariesBuilder reconciledLibsBuilder = new ReconciledLibrariesBuilder(project);
+        ReconciledLibsBuilder reconciledLibsBuilder = new ReconciledLibsBuilder(project);
         ReconciledLibs reconciledLibs = reconciledLibsBuilder.build(mte.getJavaVersion());
 
         // TODO! allow the name of the reconciled libs extension to be configured in the magictractor block
