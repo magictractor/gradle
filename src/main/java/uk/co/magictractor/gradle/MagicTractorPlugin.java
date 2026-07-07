@@ -15,11 +15,12 @@
  */
 package uk.co.magictractor.gradle;
 
+import java.lang.reflect.Method;
+
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.initialization.Settings;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -136,8 +137,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
     private void configureReconciledLibraries(MagicTractorExtension mte) {
         Project project = mte.getProject();
 
-        Settings settings = MagicTractorSettingsPlugin.getSettings(project.getGradle());
-        ReconciledLibrariesBuilder reconciledLibsBuilder = project.getObjects().newInstance(ReconciledLibrariesBuilder.class, settings);
+        ReconciledLibrariesBuilder reconciledLibsBuilder = new ReconciledLibrariesBuilder(project);
         ReconciledLibs reconciledLibs = reconciledLibsBuilder.build(mte.getJavaVersion());
 
         // TODO! allow the name of the reconciled libs extension to be configured in the magictractor block
@@ -182,7 +182,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
         // Unit testing libs.
         addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit.jupiter");
-        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.jupiterPlatform");
+        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.jupiter.platform");
         addDependency(dependencyHandler, reconciledLibs, "testImplementation", "assertj");
     }
 

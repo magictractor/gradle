@@ -21,17 +21,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.inject.Inject;
-
+import org.gradle.api.GradleException;
+import org.gradle.api.Project;
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.initialization.resolve.MutableVersionCatalogContainer;
 import org.gradle.api.internal.catalog.DefaultVersionCatalog;
 import org.gradle.api.internal.catalog.DependencyModel;
 import org.gradle.api.internal.catalog.VersionModel;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.internal.management.VersionCatalogBuilderInternal;
+
+import uk.co.magictractor.gradle.MagicTractorSettingsPlugin;
 
 /**
  * <p>
@@ -109,14 +110,16 @@ import org.gradle.internal.management.VersionCatalogBuilderInternal;
  */
 public class ReconciledLibrariesBuilder {
 
-    private final ObjectFactory objectFactory;
+    private final Project project;
 
     private final JavaVersionAliasMap<VersionModel> versionsMap = new JavaVersionAliasMap<>();
     private final JavaVersionAliasMap<DependencyModel> librariesMap = new JavaVersionAliasMap<>();
 
-    @Inject
-    public ReconciledLibrariesBuilder(Settings settings, ObjectFactory objectFactory) {
-        this.objectFactory = objectFactory;
+    public ReconciledLibrariesBuilder(Project project) {
+        this.project = project;
+
+        // TODO! fallback to reflection on LibrariesForXxx (or other) if MagicTractorSettingsPlugin is not used.
+        Settings settings = MagicTractorSettingsPlugin.getSettings(project.getGradle());
 
         MutableVersionCatalogContainer vcbs = settings.getDependencyResolutionManagement().getVersionCatalogs();
         List<DefaultVersionCatalog> vcs = vcbs.stream()
@@ -134,17 +137,53 @@ public class ReconciledLibrariesBuilder {
         }
     }
 
-    // Property must be used because the MagicTractorExtension is not populated until later.
+    // Property must be used as a parameter because the MagicTractorExtension is typically not populated until after
+    // ReconciledLibs has been built from Plugin.apply().
     public ReconciledLibs build(Property<Integer> javaVersion) {
         Map<String, Provider<String>> reconciledLibsMap = new HashMap<>();
 
         for (String normalisedAlias : librariesMap.keySet()) {
-            Provider<String> dependencyProvider = javaVersion
-                    .map(v -> dependencyString(librariesMap.valueForJavaVersion(normalisedAlias, v), v));
+            // A new transform is used rather than mapping javaVersion.
+            // If transforming javaVersion and the properties are used too soon, such
+            // as when setting up default dependencies and javaVersion is still null
+            // (not wired yet) then the transformed value is also null and the transform
+            // is not called.
+            Provider<String> dependencyProvider = project.provider(() -> lookupDependency(normalisedAlias, javaVersion));
+
             reconciledLibsMap.put(normalisedAlias, dependencyProvider);
         }
 
         return build(reconciledLibsMap);
+    }
+
+    private String lookupDependency(String normalisedAlias, Property<Integer> javaVersionProperty) {
+        if (!javaVersionProperty.isPresent()) {
+            String message = "javaVersion Property has not been set, ReconciledLib is possibly being used too soon";
+            //System.out.println("javaVersion");
+            //throw new IllegalStateException(message);
+
+            System.out.println(message);
+
+            throw new GradleException(message);
+        }
+
+        int javaVersion = javaVersionProperty.get();
+        DependencyModel dependencyModel = librariesMap.valueForJavaVersion(normalisedAlias, javaVersion);
+
+        StringBuilder sb = new StringBuilder(64);
+        sb.append(dependencyModel.getGroup());
+        sb.append(':');
+        sb.append(dependencyModel.getName());
+        sb.append(':');
+        if (dependencyModel.getVersionRef() != null) {
+            VersionModel versionModel = versionsMap.valueForJavaVersion(dependencyModel.getVersionRef(), javaVersion);
+            sb.append(versionModel.getVersion());
+        }
+        else {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        return sb.toString();
     }
 
     private ReconciledLibs build(Map<String, Provider<String>> subLibsMap) {
@@ -163,16 +202,6 @@ public class ReconciledLibrariesBuilder {
             }
         }
 
-        if (!providerKeys.isEmpty() && !subGroupKeys.isEmpty()) {
-            HashSet<String> intersection = new HashSet<>(subGroupKeys);
-            intersection.retainAll(providerKeys);
-            if (!intersection.isEmpty()) {
-                // Aah... this is where we want a prefix... "Change uses of [jupiter]", but lib could also implement provider??
-                throw new IllegalArgumentException("A key may not be used for both a subgroup and a dependency. Change uses of " + intersection
-                        + " or (better) change ReconciledLibs to also be a Provider.");
-            }
-        }
-
         for (String providerKey : providerKeys) {
             reconciledLibsMap.put(providerKey, subLibsMap.get(providerKey));
         }
@@ -186,28 +215,15 @@ public class ReconciledLibrariesBuilder {
                 }
             }
 
+            if (providerKeys.contains(subGroupKey)) {
+                subMap.put("_this", subLibsMap.get(subGroupKey));
+            }
+
             ReconciledLibs subGroup = build(subMap);
             reconciledLibsMap.put(subGroupKey, subGroup);
         }
 
-        return objectFactory.newInstance(ReconciledLibs.class, reconciledLibsMap);
-    }
-
-    private String dependencyString(DependencyModel dependencyModel, int javaVersion) {
-        StringBuilder sb = new StringBuilder(64);
-        sb.append(dependencyModel.getGroup());
-        sb.append(':');
-        sb.append(dependencyModel.getName());
-        sb.append(':');
-        if (dependencyModel.getVersionRef() != null) {
-            VersionModel versionModel = versionsMap.valueForJavaVersion(dependencyModel.getVersionRef(), javaVersion);
-            sb.append(versionModel.getVersion());
-        }
-        else {
-            throw new UnsupportedOperationException("TODO");
-        }
-
-        return sb.toString();
+        return project.getObjects().newInstance(ReconciledLibs.class, reconciledLibsMap);
     }
 
 }

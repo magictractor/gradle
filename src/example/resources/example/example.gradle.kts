@@ -7,3 +7,7 @@ version = "0.0.1-SNAPSHOT"
 magictractor {
     javaVersion = 8;
 }
+
+dependencies {
+    implementation(libs.guava)
+}

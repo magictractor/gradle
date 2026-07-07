@@ -131,7 +131,7 @@ tasks.withType<Delete>().configureEach {
 
 dependencies {
     testImplementation(libs.junit.jupiter);
-    testRuntimeOnly(libs.junit.jupiterPlatform);
+    testRuntimeOnly(libs.junit.jupiter.platform);
     testImplementation(libs.assertj);
     
     // Guava is used in tests to check that toString() implementations are consistent with Guava's ToStringHelper.

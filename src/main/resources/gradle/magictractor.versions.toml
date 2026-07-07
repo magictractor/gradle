@@ -17,7 +17,6 @@ mockito-java10 = "4.11.0"
 # From JUnit 6 junit-platform version will match junit version
 junit = "6.1.1"
 junit-platform = "6.1.1"
-# TODO! why did 6.1.1 get picked up for Java 8 projects when junit-java16 was defined? (add unit tests?) - wrong logback version too?! But Mockito OK?
 junit-java16 = "5.14.4"
 junit-platform-java16 = "1.14.4"
 
@@ -37,8 +36,7 @@ mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 
 # Testing
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-# TODO! restore junit-jupiter-platform, needs ReconciledLibs to also be a Provider (and junitPlatform-java16 below)
-junit-jupiterPlatform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+junit-jupiter-platform = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 
