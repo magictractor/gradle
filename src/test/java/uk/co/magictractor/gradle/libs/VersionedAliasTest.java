@@ -147,8 +147,10 @@ public class VersionedAliasTest {
         String guava = MoreObjects.toStringHelper(alias)
                 .add("alias", "mockito")
                 .toString();
-        String expected = "JavaVersionAlias{alias=mockito}";
-        Preconditions.checkArgument(expected.equals(guava), "Expected toString() does not match Guava ToStringHelper \"%s\"", expected);
+        String expected = "VersionedAlias{alias=mockito}";
+        // Preconditions.checkArgument(expected.equals(guava), "Expected toString() does not match Guava ToStringHelper \"%s\"", expected);
+        // Assert is more helpful than Preconditions when there's a failure.
+        assertThat(expected).as("precondition").isEqualTo(guava);
 
         assertThat(alias.toString()).isEqualTo(expected);
     }
@@ -161,8 +163,10 @@ public class VersionedAliasTest {
                 .add("catalogAlias", "mockito.java10")
                 .add("uptoJavaVersion", 10)
                 .toString();
-        String expected = "JavaVersionAlias{normalisedAlias=mockito, catalogAlias=mockito.java10, uptoJavaVersion=10}";
-        Preconditions.checkArgument(expected.equals(guava), "Expected toString() does not match Guava ToStringHelper \"%s\"", expected);
+        String expected = "VersionedAlias{normalisedAlias=mockito, catalogAlias=mockito.java10, uptoJavaVersion=10}";
+        // Preconditions.checkArgument(expected.equals(guava), "Expected toString() does not match Guava ToStringHelper \"%s\"", expected);
+        // Assert is more helpful than Preconditions when there's a failure.
+        assertThat(expected).as("precondition").isEqualTo(guava);
 
         assertThat(alias.toString()).isEqualTo(expected);
     }
