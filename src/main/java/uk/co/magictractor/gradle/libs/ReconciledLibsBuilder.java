@@ -116,8 +116,8 @@ public class ReconciledLibsBuilder {
 
     private final Project project;
 
-    private final JavaVersionAliasMap<VersionModel> versionsMap = new JavaVersionAliasMap<>();
-    private final JavaVersionAliasMap<DependencyModel> librariesMap = new JavaVersionAliasMap<>();
+    private final VersionedAliasMap<VersionModel> versionsMap = new VersionedAliasMap<>();
+    private final VersionedAliasMap<DependencyModel> librariesMap = new VersionedAliasMap<>();
 
     public ReconciledLibsBuilder(Project project) {
         this.project = project;
@@ -172,7 +172,7 @@ public class ReconciledLibsBuilder {
         if (dependencyModel.getVersionRef() != null) {
             // versionRef may include a "-javaNN" suffix,
             // typically used when the library and version refs are not used in later Java versions.
-            JavaVersionAlias versionRefAlias = JavaVersionAlias.of(dependencyModel.getVersionRef());
+            VersionedAlias versionRefAlias = VersionedAlias.of(dependencyModel.getVersionRef());
             VersionModel versionModel = versionsMap.valueForJavaVersion(versionRefAlias.getNormalisedAlias(), javaVersion);
             version = versionModel.getVersion();
 

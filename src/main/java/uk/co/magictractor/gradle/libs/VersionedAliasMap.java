@@ -24,26 +24,26 @@ import java.util.TreeMap;
 
 import org.slf4j.Logger;
 
-public class JavaVersionAliasMap<V> {
+public class VersionedAliasMap<V> {
 
-    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(JavaVersionAliasMap.class);
+    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(VersionedAliasMap.class);
 
     private static final Comparator<Integer> JAVA_VERSION_COMPARATOR = (v1, v2) -> v2 - v1;
-    private static final Comparator<JavaVersionAlias> JAVA_VERSION_ALIAS_COMPARATOR = Comparator.comparing(JavaVersionAlias::getUptoJavaVersion, JAVA_VERSION_COMPARATOR);
+    private static final Comparator<VersionedAlias> JAVA_VERSION_ALIAS_COMPARATOR = Comparator.comparing(VersionedAlias::getUptoJavaVersion, JAVA_VERSION_COMPARATOR);
 
     // LinkedHashMap to keep same order as in the version catalogs.
-    private final Map<String, TreeMap<JavaVersionAlias, V>> aliases = new LinkedHashMap<>();
+    private final Map<String, TreeMap<VersionedAlias, V>> aliases = new LinkedHashMap<>();
 
     public Set<String> keySet() {
         return aliases.keySet();
     }
 
     public void put(String catalogAlias, V value) {
-        put(JavaVersionAlias.of(catalogAlias), value);
+        put(VersionedAlias.of(catalogAlias), value);
     }
 
-    private void put(JavaVersionAlias alias, V value) {
-        TreeMap<JavaVersionAlias, V> v = aliases.computeIfAbsent(alias.getNormalisedAlias(), _ -> new TreeMap<>(JAVA_VERSION_ALIAS_COMPARATOR));
+    private void put(VersionedAlias alias, V value) {
+        TreeMap<VersionedAlias, V> v = aliases.computeIfAbsent(alias.getNormalisedAlias(), _ -> new TreeMap<>(JAVA_VERSION_ALIAS_COMPARATOR));
         if (v.containsKey(alias)) {
             throw new IllegalArgumentException("Already have value matching \"" + alias.getCatalogAlias() + "\"");
         }
@@ -51,17 +51,17 @@ public class JavaVersionAliasMap<V> {
     }
 
     public V valueForJavaVersion(String normalisedAlias, int javaVersion) {
-        TreeMap<JavaVersionAlias, V> candidates = aliases.get(normalisedAlias);
-        Map.Entry<JavaVersionAlias, V> entry = aliasForJavaVersion(javaVersion, candidates);
+        TreeMap<VersionedAlias, V> candidates = aliases.get(normalisedAlias);
+        Map.Entry<VersionedAlias, V> entry = aliasForJavaVersion(javaVersion, candidates);
         return entry.getValue();
     }
 
     /** @param candidates */
-    private Map.Entry<JavaVersionAlias, V> aliasForJavaVersion(int javaVersion, TreeMap<JavaVersionAlias, V> candidates) {
-        Iterator<Map.Entry<JavaVersionAlias, V>> iter = candidates.entrySet().iterator();
+    private Map.Entry<VersionedAlias, V> aliasForJavaVersion(int javaVersion, TreeMap<VersionedAlias, V> candidates) {
+        Iterator<Map.Entry<VersionedAlias, V>> iter = candidates.entrySet().iterator();
 
-        Map.Entry<JavaVersionAlias, V> result = iter.next();
-        JavaVersionAlias alias = result.getKey();
+        Map.Entry<VersionedAlias, V> result = iter.next();
+        VersionedAlias alias = result.getKey();
         if (!alias.isCatchAll()) {
             String message = "Aliases for \"" + alias.getNormalisedAlias() + "\" are only specified up to Java version " + alias.getUptoJavaVersion();
             if (alias.getUptoJavaVersion() < javaVersion) {
@@ -73,7 +73,7 @@ public class JavaVersionAliasMap<V> {
         }
 
         while (iter.hasNext()) {
-            Map.Entry<JavaVersionAlias, V> candidate = iter.next();
+            Map.Entry<VersionedAlias, V> candidate = iter.next();
             if (candidate.getKey().getUptoJavaVersion() < javaVersion) {
                 break;
             }

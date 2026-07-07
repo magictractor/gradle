@@ -23,11 +23,11 @@ import com.google.common.base.MoreObjects;
 import org.assertj.core.util.Preconditions;
 import org.junit.jupiter.api.Test;
 
-public class JavaVersionAliasTest {
+public class VersionedAliasTest {
 
     @Test
     public void testOf_hyphen() {
-        assertThatThrownBy(() -> JavaVersionAlias.of("hibernate-core"))
+        assertThatThrownBy(() -> VersionedAlias.of("hibernate-core"))
                 .isExactlyInstanceOf(IllegalArgumentException.class)
                 .hasMessage("catalogAlias must not contain hyphens, is \"hibernate-core\"");
     }
@@ -63,14 +63,14 @@ public class JavaVersionAliasTest {
     }
 
     private void checkUnversioned(String alias) {
-        JavaVersionAlias actual = JavaVersionAlias.of(alias);
+        VersionedAlias actual = VersionedAlias.of(alias);
         assertThat(actual.getNormalisedAlias()).isEqualTo(alias);
         assertThat(actual.getCatalogAlias()).isEqualTo(alias);
         assertThat(actual.getUptoJavaVersion()).isEqualTo(99);
     }
 
     private void checkVersioned(String alias, String expectedNormalisedAlias, int expectedVersion) {
-        JavaVersionAlias actual = JavaVersionAlias.of(alias);
+        VersionedAlias actual = VersionedAlias.of(alias);
         assertThat(actual.getNormalisedAlias()).isEqualTo(expectedNormalisedAlias);
         assertThat(actual.getCatalogAlias()).isEqualTo(alias);
         assertThat(actual.getUptoJavaVersion()).isEqualTo(expectedVersion);
@@ -78,7 +78,7 @@ public class JavaVersionAliasTest {
 
     @Test
     public void testEquals_null() {
-        JavaVersionAlias alias = JavaVersionAlias.of("mockito");
+        VersionedAlias alias = VersionedAlias.of("mockito");
 
         assertThat(alias.equals(null)).isFalse();
     }
@@ -86,15 +86,15 @@ public class JavaVersionAliasTest {
     @SuppressWarnings("unlikely-arg-type")
     @Test
     public void testEquals_otherType() {
-        JavaVersionAlias alias = JavaVersionAlias.of("mockito");
+        VersionedAlias alias = VersionedAlias.of("mockito");
 
         assertThat(alias.equals("other")).isFalse();
     }
 
     @Test
     public void testEqualsAndHashCode_same() {
-        JavaVersionAlias alias1 = JavaVersionAlias.of("mockito");
-        JavaVersionAlias alias2 = JavaVersionAlias.of("mockito");
+        VersionedAlias alias1 = VersionedAlias.of("mockito");
+        VersionedAlias alias2 = VersionedAlias.of("mockito");
         // Guard against of() using a cache.
         Preconditions.checkArgument(alias1 != alias2, "alias1 and alias2 should not be the same");
 
@@ -105,37 +105,37 @@ public class JavaVersionAliasTest {
 
     @Test
     public void testEqualsAndHashCode_differentAlias() {
-        JavaVersionAlias alias1 = JavaVersionAlias.of("mockito");
-        JavaVersionAlias alias2 = JavaVersionAlias.of("guava");
+        VersionedAlias alias1 = VersionedAlias.of("mockito");
+        VersionedAlias alias2 = VersionedAlias.of("guava");
 
         checkNotEqual(alias1, alias2);
     }
 
     @Test
     public void testEqualsAndHashCode_differentAliasWithUpto() {
-        JavaVersionAlias alias1 = JavaVersionAlias.of("mockito.java10");
-        JavaVersionAlias alias2 = JavaVersionAlias.of("guava.java10");
+        VersionedAlias alias1 = VersionedAlias.of("mockito.java10");
+        VersionedAlias alias2 = VersionedAlias.of("guava.java10");
 
         checkNotEqual(alias1, alias2);
     }
 
     @Test
     public void testEqualsAndHashCode_differentUpto() {
-        JavaVersionAlias alias1 = JavaVersionAlias.of("mockito.java10");
-        JavaVersionAlias alias2 = JavaVersionAlias.of("mockito.java16");
+        VersionedAlias alias1 = VersionedAlias.of("mockito.java10");
+        VersionedAlias alias2 = VersionedAlias.of("mockito.java16");
 
         checkNotEqual(alias1, alias2);
     }
 
     @Test
     public void testEqualsAndHashCode_oneCatchAll() {
-        JavaVersionAlias alias1 = JavaVersionAlias.of("mockito");
-        JavaVersionAlias alias2 = JavaVersionAlias.of("mockito.java16");
+        VersionedAlias alias1 = VersionedAlias.of("mockito");
+        VersionedAlias alias2 = VersionedAlias.of("mockito.java16");
 
         checkNotEqual(alias1, alias2);
     }
 
-    private void checkNotEqual(JavaVersionAlias alias1, JavaVersionAlias alias2) {
+    private void checkNotEqual(VersionedAlias alias1, VersionedAlias alias2) {
         assertThat(alias1.equals(alias2)).isFalse();
         assertThat(alias2.equals(alias1)).isFalse();
         assertThat(alias1.hashCode()).isNotEqualTo(alias2.hashCode());
@@ -143,7 +143,7 @@ public class JavaVersionAliasTest {
 
     @Test
     public void testToString_catchAll() {
-        JavaVersionAlias alias = JavaVersionAlias.of("mockito");
+        VersionedAlias alias = VersionedAlias.of("mockito");
         String guava = MoreObjects.toStringHelper(alias)
                 .add("alias", "mockito")
                 .toString();
@@ -155,7 +155,7 @@ public class JavaVersionAliasTest {
 
     @Test
     public void testToString_withUpto() {
-        JavaVersionAlias alias = JavaVersionAlias.of("mockito.java10");
+        VersionedAlias alias = VersionedAlias.of("mockito.java10");
         String guava = MoreObjects.toStringHelper(alias)
                 .add("normalisedAlias", "mockito")
                 .add("catalogAlias", "mockito.java10")

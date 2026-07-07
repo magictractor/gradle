@@ -18,14 +18,14 @@ package uk.co.magictractor.gradle.libs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JavaVersionAlias {
+public class VersionedAlias {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JavaVersionAlias.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VersionedAlias.class);
 
     // Not using the JDK version because the toolchain and version catalog could be using a later JDK than Gradle.
     private static final int CATCH_ALL_JAVA_LANGUAGE_VERSION = 99;
 
-    public static JavaVersionAlias of(String catalogAlias) {
+    public static VersionedAlias of(String catalogAlias) {
         if (catalogAlias.indexOf('-') >= 0) {
             // Useful guard against bad test data.
             // The hyphens in the .toml have already been converted (where?).
@@ -39,7 +39,7 @@ public class JavaVersionAlias {
             if (lastAliasSegment.startsWith("java")) {
                 try {
                     int javaVersion = Integer.parseInt(lastAliasSegment, 4, lastAliasSegment.length(), 10);
-                    return new JavaVersionAlias(catalogAlias, catalogAlias.substring(0, lastDotIndex), javaVersion);
+                    return new VersionedAlias(catalogAlias, catalogAlias.substring(0, lastDotIndex), javaVersion);
                 }
                 catch (NumberFormatException e) {
                     LOGGER.warn("Malformed alias {}", catalogAlias);
@@ -48,18 +48,18 @@ public class JavaVersionAlias {
             }
         }
 
-        return new JavaVersionAlias(catalogAlias);
+        return new VersionedAlias(catalogAlias);
     }
 
     private final String catalogAlias;
     private final String normalisedAlias;
     private final int uptoJavaVersion;
 
-    private JavaVersionAlias(String catalogAlias) {
+    private VersionedAlias(String catalogAlias) {
         this(catalogAlias, catalogAlias, CATCH_ALL_JAVA_LANGUAGE_VERSION);
     }
 
-    private JavaVersionAlias(String catalogAlias, String normalisedAlias, int uptoJavaVersion) {
+    private VersionedAlias(String catalogAlias, String normalisedAlias, int uptoJavaVersion) {
         this.catalogAlias = catalogAlias;
         this.normalisedAlias = normalisedAlias;
         this.uptoJavaVersion = uptoJavaVersion;
@@ -94,7 +94,7 @@ public class JavaVersionAlias {
             return false;
         }
 
-        JavaVersionAlias other = (JavaVersionAlias) obj;
+        VersionedAlias other = (VersionedAlias) obj;
         return other.normalisedAlias.equals(normalisedAlias) && other.uptoJavaVersion == uptoJavaVersion;
     }
 

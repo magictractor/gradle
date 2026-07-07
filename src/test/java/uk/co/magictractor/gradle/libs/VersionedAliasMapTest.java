@@ -20,11 +20,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-public class JavaVersionAliasMapTest {
+public class VersionedAliasMapTest {
 
     @Test
     public void test() {
-        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        VersionedAliasMap<String> map = new VersionedAliasMap<>();
         map.put("mockito", "5.23.0");
         map.put("mockito.java16", "4.11.0");
 
@@ -38,7 +38,7 @@ public class JavaVersionAliasMapTest {
 
     @Test
     public void t2() {
-        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        VersionedAliasMap<String> map = new VersionedAliasMap<>();
         map.put("junit", "6.1.1");
         map.put("junit.platform", "6.1.1");
         map.put("junit.java16", "5.14.4");
@@ -59,7 +59,7 @@ public class JavaVersionAliasMapTest {
 
     @Test
     public void test_noCatchAll() {
-        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        VersionedAliasMap<String> map = new VersionedAliasMap<>();
         map.put("mockito.java16", "4.11.0");
 
         assertThat(map.valueForJavaVersion("mockito", 16)).isEqualTo("4.11.0");
@@ -70,7 +70,7 @@ public class JavaVersionAliasMapTest {
 
     @Test
     public void test_putDuplicate() {
-        JavaVersionAliasMap<String> map = new JavaVersionAliasMap<>();
+        VersionedAliasMap<String> map = new VersionedAliasMap<>();
         map.put("mockito.java16", "4.11.0");
         // TODO! check warning was logged
 
