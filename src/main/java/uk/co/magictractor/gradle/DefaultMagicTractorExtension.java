@@ -18,12 +18,13 @@ package uk.co.magictractor.gradle;
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
+import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.internal.provider.PropertyFactory;
 import org.gradle.api.provider.Property;
 
 public abstract class DefaultMagicTractorExtension implements MagicTractorExtension {
 
-    private final Project project;
+    private final ProjectInternal project;
 
     private final Property<Integer> javaVersion;
     private final Property<String> pomDescription;
@@ -31,7 +32,7 @@ public abstract class DefaultMagicTractorExtension implements MagicTractorExtens
 
     @Inject
     public DefaultMagicTractorExtension(Project project, PropertyFactory propertyFactory) {
-        this.project = project;
+        this.project = (ProjectInternal) project;
 
         javaVersion = propertyFactory.property(Integer.class);
         // TODO! convention() should read the description from the first para of README.md
@@ -40,7 +41,7 @@ public abstract class DefaultMagicTractorExtension implements MagicTractorExtens
     }
 
     @Override
-    public Project getProject() {
+    public ProjectInternal getProject() {
         return project;
     }
 

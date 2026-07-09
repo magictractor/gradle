@@ -20,6 +20,7 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
+import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -57,8 +58,6 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        // System.out.println("Settings[p]: " + MagicTractorSettingsPlugin.getSettings(project.getGradle()));
-
         MagicTractorExtension mte = project.getExtensions()
                 .create("magictractor", DefaultMagicTractorExtension.class);
 
@@ -134,7 +133,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
     }
 
     private void configureReconciledLibraries(MagicTractorExtension mte) {
-        Project project = mte.getProject();
+        ProjectInternal project = mte.getProject();
 
         ReconciledLibsBuilder reconciledLibsBuilder = new ReconciledLibsBuilder(project);
         ReconciledLibs reconciledLibs = reconciledLibsBuilder.build(mte.getJavaVersion());

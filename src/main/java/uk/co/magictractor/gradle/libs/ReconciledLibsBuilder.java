@@ -23,8 +23,8 @@ import java.util.Set;
 
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
-import org.gradle.api.initialization.Settings;
 import org.gradle.api.initialization.resolve.MutableVersionCatalogContainer;
+import org.gradle.api.internal.SettingsInternal;
 import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
 import org.gradle.api.internal.artifacts.ImmutableVersionConstraint;
 import org.gradle.api.internal.artifacts.dependencies.DefaultMinimalDependency;
@@ -32,11 +32,10 @@ import org.gradle.api.internal.artifacts.dependencies.DefaultMutableVersionConst
 import org.gradle.api.internal.catalog.DefaultVersionCatalog;
 import org.gradle.api.internal.catalog.DependencyModel;
 import org.gradle.api.internal.catalog.VersionModel;
+import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.internal.management.VersionCatalogBuilderInternal;
-
-import uk.co.magictractor.gradle.MagicTractorSettingsPlugin;
 
 /**
  * <p>
@@ -119,12 +118,10 @@ public class ReconciledLibsBuilder {
     private final VersionedAliasMap<VersionModel> versionsMap = new VersionedAliasMap<>();
     private final VersionedAliasMap<DependencyModel> librariesMap = new VersionedAliasMap<>();
 
-    public ReconciledLibsBuilder(Project project) {
+    public ReconciledLibsBuilder(ProjectInternal project) {
         this.project = project;
 
-        // TODO! fallback to reflection on LibrariesForXxx (or other) if MagicTractorSettingsPlugin is not used.
-        Settings settings = MagicTractorSettingsPlugin.getSettings(project.getGradle());
-
+        SettingsInternal settings = project.getGradle().getSettings();
         MutableVersionCatalogContainer vcbs = settings.getDependencyResolutionManagement().getVersionCatalogs();
         List<DefaultVersionCatalog> vcs = vcbs.stream()
                 .map(VersionCatalogBuilderInternal.class::cast)

@@ -15,7 +15,7 @@
  */
 package uk.co.magictractor.gradle;
 
-import org.gradle.api.Project;
+import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.provider.Property;
 
 /**
@@ -25,7 +25,7 @@ public interface MagicTractorExtension {
 
     /** The owning project. */
     // design decision: this is used to reduce the number of parameters passed around in MagicTractorPlugin
-    Project getProject();
+    ProjectInternal getProject();
 
     /**
      * <p>

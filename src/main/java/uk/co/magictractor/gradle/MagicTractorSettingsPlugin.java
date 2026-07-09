@@ -33,18 +33,8 @@ import org.gradle.api.invocation.Gradle;
 
 public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
 
-    private static final String GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY = MagicTractorSettingsPlugin.class.getPackageName() + "settings";
-
     private static final String MAGIC_TRACTOR_VERSION_CATALOG = "/gradle/magictractor.versions.toml";
     private static final Map<String, String> ZIP_FILE_SYSTEM_OPTIONS = Map.of("create", "true");
-
-    // Makes the settings available to project Plugins and Extensions.
-    // Specifically, it is used to allow version catalog settings to be inspected without resorting to reflection.
-    public static Settings getSettings(Gradle gradle) {
-        // hmm, Logger not on Gradle. Just use SLF4J directly?
-        // TODO! return Optional and have fallback to reflection?
-        return getGradleExtraProperty(gradle, GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY);
-    }
 
     private static <T> T getGradleExtraProperty(Gradle gradle, String propertyKey) {
         @SuppressWarnings("unchecked")
@@ -63,8 +53,6 @@ public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
 
     @Override
     public void apply(Settings settings) {
-        settings.getGradle().getExtensions().getExtraProperties().set(GRADLE_EXTRA_PROPERTIES_SETTINGS_KEY, settings);
-
         URL url = getClass().getResource("/magictractor-settings-plugin.settings.gradle.kts");
         settings.apply(act -> act.from(url));
 
