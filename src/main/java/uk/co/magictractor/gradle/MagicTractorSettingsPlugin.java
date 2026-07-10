@@ -33,7 +33,7 @@ import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser;
 
 public abstract class MagicTractorSettingsPlugin implements Plugin<Settings> {
 
-    private static final String MAGIC_TRACTOR_VERSION_CATALOG = "/gradle/magictractor.versions.toml";
+    private static final String MAGIC_TRACTOR_VERSION_CATALOG = "/gradle/magictractorLibs.versions.toml";
     private static final Map<String, String> ZIP_FILE_SYSTEM_OPTIONS = Map.of("create", "true");
     private static final String UNSET = "__unset__";
 

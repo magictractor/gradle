@@ -11,7 +11,7 @@ rootProject.buildFileName = "gradle.gradle.kts"
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
-            from(files("src/main/resources/gradle/magictractor.versions.toml"))
+            from(files("src/main/resources/gradle/magictractorLibs.versions.toml"))
         }
     }
 }
