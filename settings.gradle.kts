@@ -1,16 +1,26 @@
-// Other magictractor projects use the plugins in this project
-// to provide simpler and standardised build configurations.
-//
-// This project does not use its own plugins for the build
-// so the build structure is not consistent with other 
-// Magic Tractor projects.
+pluginManagement {
+    repositories {
+        mavenCentral()
+        // Repsy for boostrapping with an older release of this plugin.
+        maven {
+            url = uri("https://repo.repsy.io/magictractor/maven")
+        }
+        
+        // temp - bootstrap with snapshot
+        mavenLocal()
+    }
+}
+
 
 rootProject.name = "magictractor-gradle"
 rootProject.buildFileName = "gradle.gradle.kts"
 
+
 dependencyResolutionManagement {
     versionCatalogs {
-        create("libs") {
+        // Use the local magictractorLibs.versions.toml rather than 
+        // boostrapping from a previous release which might have older versions.
+        create("magictractorLibs") {
             from(files("src/main/resources/gradle/magictractorLibs.versions.toml"))
         }
     }

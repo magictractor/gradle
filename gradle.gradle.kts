@@ -8,133 +8,25 @@ plugins {
     // is present but does not contain expected classes such as org.gradle.api.Plugin.
     id("java-gradle-plugin")
     
-    // https://docs.gradle.org/current/userguide/publishing_maven.html
-    id("maven-publish")
-
+    // java-gradle-plugin magictractor-plugin both apply java-library
+    //id("uk.co.magictractor.magictractor-plugin") version "0.0.3"
+    id("uk.co.magictractor.magictractor-plugin") version "0.0.1-SNAPSHOT"
+    
     id("eclipse")
 }
+
 
 group = "uk.co.magictractor"
 version = "0.0.1-SNAPSHOT"
 
-// https://docs.gradle.org/current/userguide/publishing_maven.html
-publishing {
-    publications {
-        withType<MavenPublication>().configureEach {
-            pom {
-                name = "${project.name}"
-                description = "Create PDFs and other documents using a builder that abstracts use of Apache FOP."
-                url = "https://github.com/magictractor/${project.name}"
-                inceptionYear = "2026"
 
-                licenses {
-                    license {
-                        name = "Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "kend"
-                        name = "Ken Dobson"
-                       // email = "me@gmail.com"
-                    }
-                }
-                scm {
-                    // connection = "scm:git:git:github.com/magictractor/${project.name}.git"
-                    // developerConnection = "scm:git:ssh://github.com/magictractor/${project.name}.git"
-                    url = "https://github.com/magictractor/${project.name}"
-                }
-            }
-        }
-    }
+magictractor {
+    javaVersion = 17
 
-    repositories {
-        //maven {
-        //    name = "myRepo"
-        //    url = layout.buildDirectory.dir("repo")
-        //}
-    }
-}
-
-// https://docs.gradle.org/current/userguide/declaring_repositories.html
-repositories {
-    mavenCentral()
-}
-
-java {
-    // All test resources because .java files will be copied for compilation using GradleRunner
-    // and they will not be packaged in the jar.
-    sourceSets["test"].resources {
-        srcDir("src/example/java")
-        srcDir("src/example/test")
-        srcDir("src/example/resources")
-    }
-}
-
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-    //jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
-}
-
-// https://docs.gradle.org/current/userguide/building_java_projects.html
-// https://docs.gradle.org/current/userguide/java_plugin.html
-// TODO! revisit withType() here - JavaCompile is not correct?
-// tasks.withType<JavaCompile>().configureEach {
-java {
-//tasks.withType<JavaPlugin>().configureEach {
-    // task: extension 'java'  class org.gradle.api.plugins.internal.DefaultJavaPluginExtension_Decorated
-    //logger.lifecycle("task: " + this + "  " + this.javaClass)
-
-    toolchain {
-        // Gradle 9.0.0 code needs Java 17.
-        // https://docs.gradle.org/9.0.0/release-notes.html#jvm-17
-        //
-        // Projects using this plugin may use toolchains with earlier versions.
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-    
-    withSourcesJar()
-    //withJavadocJar()
-}
-
-// :compileJava
-tasks.withType<JavaCompile>().configureEach {
-    // Include details about deprecated code in build/reports/problems/problems-report.html
-    // options.compilerArgs.add("-Xlint:unchecked")
-    options.setDeprecation(true)
+    pomInceptionYear = "2026"
 }
 
 
-// :jar
-tasks.withType<Jar>().configureEach {
-    destinationDirectory.set(file("$rootDir/jars"))
-}
-
-// :clean
-tasks.withType<Delete>().configureEach {
-    // Before doFirst for caching.
-    // https://docs.gradle.org/9.5.0/userguide/configuration_cache_requirements.html#config_cache:requirements:disallowed_types
-    val jarDir = File("$rootDir/jars")
-     
-    doFirst {
-        val deleted = jarDir.deleteRecursively()
-        if (deleted) {
-            logger.lifecycle("jars deleted")
-        } else {
-            logger.warn("Failed to delete " + jarDir)
-        }
-    }
-}
-
-dependencies {
-    testImplementation(libs.junit);
-    testRuntimeOnly(libs.junit.platform);
-    testImplementation(libs.assertj);
-    
-    // Guava is used in tests to check that toString() implementations are consistent with Guava's ToStringHelper.
-    testImplementation(libs.guava);
-}
 
 gradlePlugin {
     plugins {
@@ -148,6 +40,24 @@ gradlePlugin {
         }
     }
 }
+
+
+java {
+    // All test resources because .java files will be copied for compilation using GradleRunner
+    // and they will not be packaged in the jar.
+    sourceSets["test"].resources {
+        srcDir("src/example/java")
+        srcDir("src/example/test")
+        srcDir("src/example/resources")
+    }
+}
+
+
+dependencies {
+    // Guava is used in tests to check that toString() implementations are consistent with Guava's ToStringHelper.
+    testImplementation(libs.guava);
+}
+
 
 // https://docs.gradle.org/current/dsl/org.gradle.plugins.ide.eclipse.model.EclipseProject.html
 // https://github.com/redhat-developer/vscode-java/issues/3311

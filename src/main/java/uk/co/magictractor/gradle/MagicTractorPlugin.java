@@ -20,10 +20,12 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
+import org.gradle.api.artifacts.repositories.PasswordCredentials;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.publish.PublicationContainer;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPom;
 import org.gradle.api.publish.maven.MavenPublication;
@@ -69,7 +71,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
         configureTestTasks(mte);
         configureReconciledLibraries(mte);
         configureDefaultDependencies(mte);
-        configurePublishingExtension(mte);
+        configurePublishing(mte);
 
         project.afterEvaluate(p -> {
             //configureReconciledLibraries(mte);
@@ -80,9 +82,22 @@ public class MagicTractorPlugin implements Plugin<Project> {
         Project project = mte.getProject();
 
         // TODO! maybe "java" or "java-platform" for some projects??
+        // and "java-gradle-plugin" when bootstrapping this project
+        // https://docs.gradle.org/current/userguide/java_plugin.html#java_plugin
+        // https://docs.gradle.org/current/userguide/java_library_plugin.html
         project.getPlugins().apply("java-library");
         // https://docs.gradle.org/current/userguide/publishing_maven.html
         project.getPlugins().apply("maven-publish");
+
+        // dependies use apply(), not extended classes
+        //
+        // JavaLibraryPlugin applies JavaPlugin
+        // JavaBasePlugin "compiles and tests Java source, and assembles it into a JAR file"
+        // JavaGradlePluginPlugin applies JavaLibraryPlugin
+        // JavaLibraryDistributionPlugin applies JavaLibraryPlugin and DistributionPlugin "package a Java project as a distribution including the JAR and runtime dependencies"
+        // JavaPlatformPlugin distinct from "java" and "java-library", like Maven BOM
+        // JavaPlugin applies JavaBasePlugin
+        // JavaTestFixturesPlugin
     }
 
     private void configureJavaPluginExtension(MagicTractorExtension mte) {
@@ -106,7 +121,12 @@ public class MagicTractorPlugin implements Plugin<Project> {
         // Maybe validate MagicTractorExtension?
         languageVersionProperty.disallowChanges();
 
+        // Maven Central artifacts must have jars for source and Javadoc.
+        // https://central.sonatype.org/publish/requirements/#supply-javadoc-and-sources
         jpe.withSourcesJar();
+        // Javadoc causes build errors with missing params etc,
+        // so we'll only want Javadoc for full releases, and maybe not on all projects.
+        //jpe.withJavadocJar();
     }
 
     private void configureGroup(MagicTractorExtension mte) {
@@ -128,8 +148,9 @@ public class MagicTractorPlugin implements Plugin<Project> {
         // https://stackoverflow.com/questions/32143437/how-to-list-the-configured-repositories
         RepositoryHandler repositories = mte.getProject().getRepositories();
         repositories.mavenCentral();
-        // Local maven used for other magictractor projects.
+        // Local maven used for snapshots of other magictractor projects.
         repositories.mavenLocal();
+        // TODO! add repsy here?
     }
 
     private void configureReconciledLibraries(MagicTractorExtension mte) {
@@ -215,22 +236,24 @@ public class MagicTractorPlugin implements Plugin<Project> {
     }
 
     // https://docs.gradle.org/current/userguide/publishing_maven.html
-    private void configurePublishingExtension(MagicTractorExtension mte) {
+    private void configurePublishing(MagicTractorExtension mte) {
         PublishingExtension publishingExtension = mte.getProject().getExtensions().getByType(PublishingExtension.class);
 
-        //publishingExtension.publications(publications -> configurePublications(mte, publications));
+        // TODO! repositories added should be dependent on whether or not this is a snapshot
+        configurePublishingRepositories(publishingExtension.getRepositories(), mte.getProject());
 
-        MavenPublication maven = publishingExtension.getPublications().create("mavenJava", MavenPublication.class);
+        PublicationContainer publications = publishingExtension.getPublications();
+        publications.configureEach(publication -> {
+            MavenPom pom = ((MavenPublication) publication).getPom();
+            configurePom(pom, mte);
+        });
 
         // Wthout from() only the pom file would be created.
-        // How to get the SoftwareCompontent matching "from components.java"?
-        // Looks like project.getComponents().getByName("java");
-        maven.from(mte.getProject().getComponents().getByName("java"));
+        // TODO! commented out temporarily to check whether still needed
+        //publication.from(mte.getProject().getComponents().getByName("java"));
+    }
 
-        MavenPom pom = maven.getPom();
-
-        mte.getProject().getRootDir();
-
+    private void configurePom(MavenPom pom, MagicTractorExtension mte) {
         // Name used in the artifact. Libs should have "magictractor-" prefix.
         String projectName = mte.getProject().getName();
         // Name without "magictractor-" prefix used in Github.
@@ -256,6 +279,16 @@ public class MagicTractorPlugin implements Plugin<Project> {
 
         pom.scm(scm -> {
             scm.getUrl().set(url);
+        });
+    }
+
+    private void configurePublishingRepositories(RepositoryHandler repositoryHandler, Project project) {
+        repositoryHandler.maven(repo -> {
+            repo.setName("repsy");
+            repo.setUrl(project.uri("https://repo.repsy.io/magictractor/maven"));
+            PasswordCredentials credentials = repo.getCredentials();
+            credentials.setUsername(project.getProviders().gradleProperty("repsyUsername").get());
+            credentials.setPassword(project.getProviders().gradleProperty("repsyPassword").get());
         });
     }
 
