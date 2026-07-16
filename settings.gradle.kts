@@ -1,6 +1,5 @@
 pluginManagement {
     repositories {
-        mavenCentral()
         // Repsy for boostrapping with an older release of this plugin.
         maven {
             url = uri("https://repo.repsy.io/magictractor/maven")
@@ -8,6 +7,9 @@ pluginManagement {
         
         // temp - bootstrap with snapshot
         mavenLocal()
+        
+        // Gradle Plugin Portal for nebula.release
+        gradlePluginPortal()
     }
 }
 

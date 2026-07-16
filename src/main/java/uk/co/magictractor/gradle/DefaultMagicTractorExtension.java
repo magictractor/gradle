@@ -22,11 +22,12 @@ import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.internal.provider.PropertyFactory;
 import org.gradle.api.provider.Property;
 
-public abstract class DefaultMagicTractorExtension implements MagicTractorExtension {
+public class DefaultMagicTractorExtension implements MagicTractorExtension {
 
     private final ProjectInternal project;
 
     private final Property<Integer> javaVersion;
+    private final Property<Boolean> useStandardDependencies;
     private final Property<String> pomDescription;
     private final Property<String> pomInceptionYear;
 
@@ -35,6 +36,7 @@ public abstract class DefaultMagicTractorExtension implements MagicTractorExtens
         this.project = (ProjectInternal) project;
 
         javaVersion = propertyFactory.property(Integer.class);
+        useStandardDependencies = propertyFactory.property(Boolean.class).convention(true);
         // TODO! convention() should read the description from the first para of README.md
         pomDescription = propertyFactory.property(String.class);
         pomInceptionYear = propertyFactory.property(String.class);
@@ -48,6 +50,11 @@ public abstract class DefaultMagicTractorExtension implements MagicTractorExtens
     @Override
     public Property<Integer> getJavaVersion() {
         return javaVersion;
+    }
+
+    @Override
+    public Property<Boolean> getUseStandardDependencies() {
+        return useStandardDependencies;
     }
 
     @Override

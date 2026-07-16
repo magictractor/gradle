@@ -23,9 +23,11 @@ version = "0.0.1-SNAPSHOT"
 magictractor {
     javaVersion = 17
 
+    // Gradle provides a logging API and a copy of many libraries.
+    useStandardDependencies = false
+
     pomInceptionYear = "2026"
 }
-
 
 
 gradlePlugin {
@@ -54,6 +56,8 @@ java {
 
 
 dependencies {
+    implementation("com.netflix.nebula:nebula-release-plugin:21.0.0")
+
     // Guava is used in tests to check that toString() implementations are consistent with Guava's ToStringHelper.
     testImplementation(libs.guava);
 }

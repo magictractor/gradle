@@ -33,6 +33,7 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
+import nebula.plugin.release.ReleasePlugin;
 import uk.co.magictractor.gradle.libs.ReconciledLibs;
 import uk.co.magictractor.gradle.libs.ReconciledLibsBuilder;
 
@@ -70,7 +71,7 @@ public class MagicTractorPlugin implements Plugin<Project> {
         configureJavaCompileTasks(mte);
         configureTestTasks(mte);
         configureReconciledLibraries(mte);
-        configureDefaultDependencies(mte);
+        configureStandardDependencies(mte);
         configurePublishing(mte);
 
         project.afterEvaluate(p -> {
@@ -88,6 +89,9 @@ public class MagicTractorPlugin implements Plugin<Project> {
         project.getPlugins().apply("java-library");
         // https://docs.gradle.org/current/userguide/publishing_maven.html
         project.getPlugins().apply("maven-publish");
+
+        // TODO! add hooks
+        Plugin release = project.getPlugins().apply(ReleasePlugin.class);
 
         // dependies use apply(), not extended classes
         //
@@ -190,7 +194,13 @@ public class MagicTractorPlugin implements Plugin<Project> {
      *  }
      *  </pre>
      */
-    private void configureDefaultDependencies(MagicTractorExtension mte) {
+    private void configureStandardDependencies(MagicTractorExtension mte) {
+        // AAH! Too soon, magictractor values have not been read yet...
+        if (!mte.getUseStandardDependencies().get()) {
+            mte.getProject().getLogger().lifecycle("Not using standard dependencies");
+            return;
+        }
+
         Project project = mte.getProject();
         DependencyHandler dependencyHandler = project.getDependencies();
         ReconciledLibs reconciledLibs = project.getExtensions().findByType(ReconciledLibs.class);

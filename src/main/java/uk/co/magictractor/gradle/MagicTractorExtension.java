@@ -46,6 +46,17 @@ public interface MagicTractorExtension {
      */
     Property<Integer> getJavaVersion();
 
+    /**
+     * <p>
+     * Whether to include the dependencies that are used in nearly all
+     * magictractor projects, namely Slf4j, JUnit and AssertJ.
+     * </p>
+     * <p>
+     * Defaults to {@code true}.
+     * </p>
+     */
+    Property<Boolean> getUseStandardDependencies();
+
     /** The description to be included in the {@code pom.xml} file. */
     Property<String> getPomDescription();
 
