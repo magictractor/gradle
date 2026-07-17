@@ -23,8 +23,10 @@ version = "0.0.1-SNAPSHOT"
 magictractor {
     javaVersion = 17
 
-    // Gradle provides a logging API and a copy of many libraries.
-    useStandardDependencies = false
+    standardDependencies {
+       // Gradle provides a logging API and a copy of many libraries.
+       addLoggingDependencies = false;
+    }
 
     pomInceptionYear = "2026"
 }

@@ -29,11 +29,15 @@ import org.gradle.api.publish.PublicationContainer;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPom;
 import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
 import nebula.plugin.release.ReleasePlugin;
+import uk.co.magictractor.gradle.extension.DefaultMagicTractorExtension;
+import uk.co.magictractor.gradle.extension.MagicTractorExtension;
+import uk.co.magictractor.gradle.extension.StandardDependencies;
 import uk.co.magictractor.gradle.libs.ReconciledLibs;
 import uk.co.magictractor.gradle.libs.ReconciledLibsBuilder;
 
@@ -59,6 +63,8 @@ import uk.co.magictractor.gradle.libs.ReconciledLibsBuilder;
 // https://discuss.gradle.org/t/custom-plugins-dont-include-source/5651
 public class MagicTractorPlugin implements Plugin<Project> {
 
+    private static final String TASK_NAME_CONFIGURE_STANDARD_DEPENDENCIES = "configureStandardDependencies";
+
     @Override
     public void apply(Project project) {
         MagicTractorExtension mte = project.getExtensions()
@@ -67,15 +73,32 @@ public class MagicTractorPlugin implements Plugin<Project> {
         configureDefaultPlugins(mte);
         configureRepositories(mte);
         configureGroup(mte);
+
         configureJavaPluginExtension(mte);
-        configureJavaCompileTasks(mte);
-        configureTestTasks(mte);
         configureReconciledLibraries(mte);
-        configureStandardDependencies(mte);
+        //  configureStandardDependencies(mte);
         configurePublishing(mte);
 
+        TaskContainer tasks = project.getTasks();
+
+        //        tasks.register(TASK_NAME_CONFIGURE_STANDARD_DEPENDENCIES, task -> {
+        //            System.out.println("*** OOK");
+        //            configureStandardDependencies(mte);
+        //        });
+
+        // Too soon...
+        // tasks.named("compileJava", task -> {
+        //     configureStandardDependencies(mte);
+        // });
+
+        tasks.withType(JavaCompile.class, this::configureJavaCompileTask);
+        tasks.withType(Test.class, this::configureTestTask);
+
         project.afterEvaluate(p -> {
-            //configureReconciledLibraries(mte);
+            // I'd like to avoid afterEvaluate.
+            // Calling this from a task with dependsOn added to compile tasks
+            // worked for publish, but failed for test (trying to change config too late).
+            configureStandardDependencies(mte);
         });
     }
 
@@ -195,24 +218,22 @@ public class MagicTractorPlugin implements Plugin<Project> {
      *  </pre>
      */
     private void configureStandardDependencies(MagicTractorExtension mte) {
-        // AAH! Too soon, magictractor values have not been read yet...
-        if (!mte.getUseStandardDependencies().get()) {
-            mte.getProject().getLogger().lifecycle("Not using standard dependencies");
-            return;
-        }
+        StandardDependencies standardDependencies = mte.getStandardDependencies();
 
         Project project = mte.getProject();
         DependencyHandler dependencyHandler = project.getDependencies();
         ReconciledLibs reconciledLibs = project.getExtensions().findByType(ReconciledLibs.class);
 
-        // Logging libs.
-        addDependency(dependencyHandler, reconciledLibs, "implementation", "slf4j.api");
-        addDependency(dependencyHandler, reconciledLibs, "runtimeOnly", "logback.classic");
+        if (standardDependencies.getAddLoggingDependencies().get()) {
+            addDependency(dependencyHandler, reconciledLibs, "implementation", "slf4j.api");
+            addDependency(dependencyHandler, reconciledLibs, "runtimeOnly", "logback.classic");
+        }
 
-        // Unit testing libs.
-        addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit");
-        addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.platform");
-        addDependency(dependencyHandler, reconciledLibs, "testImplementation", "assertj");
+        if (standardDependencies.getAddUnitTestDependencies().get()) {
+            addDependency(dependencyHandler, reconciledLibs, "testImplementation", "junit");
+            addDependency(dependencyHandler, reconciledLibs, "testRuntimeOnly", "junit.platform");
+            addDependency(dependencyHandler, reconciledLibs, "testImplementation", "assertj");
+        }
     }
 
     private void addDependency(DependencyHandler dependencyHandler,
@@ -224,22 +245,27 @@ public class MagicTractorPlugin implements Plugin<Project> {
         dependencyHandler.add(configurationName, dependency);
     }
 
-    private void configureJavaCompileTasks(MagicTractorExtension mte) {
-        mte.getProject().getTasks().withType(JavaCompile.class, this::configureJavaCompileTask);
-    }
+    //    private void configureJavaCompileTasks(MagicTractorExtension mte) {
+    //        mte.getProject().getTasks().withType(JavaCompile.class, this::configureJavaCompileTask);
+    //    }
 
     /**
      * Typically called twice, for {@code :javaCompile} and
      * {@code :javaTestCompile}.
      */
     private void configureJavaCompileTask(JavaCompile javaCompileTask) {
+        System.out.println("configureJavaCompileTask  " + javaCompileTask);
+
+        //javaCompileTask.dependsOn(TASK_NAME_CONFIGURE_STANDARD_DEPENDENCIES);
+        // configureStandardDependencies(null);
+
         javaCompileTask.getOptions().setDeprecation(true);
         javaCompileTask.getOptions().setEncoding("UTF-8");
     }
 
-    private void configureTestTasks(MagicTractorExtension mte) {
-        mte.getProject().getTasks().withType(Test.class, this::configureTestTask);
-    }
+    //    private void configureTestTasks(MagicTractorExtension mte) {
+    //        mte.getProject().getTasks().withType(Test.class, this::configureTestTask);
+    //    }
 
     private void configureTestTask(Test testTask) {
         testTask.useJUnitPlatform();

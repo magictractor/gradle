@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle;
+package uk.co.magictractor.gradle.extension;
 
+import org.gradle.api.Action;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Nested;
 
 /**
  *
@@ -55,7 +57,10 @@ public interface MagicTractorExtension {
      * Defaults to {@code true}.
      * </p>
      */
-    Property<Boolean> getUseStandardDependencies();
+    @Nested
+    StandardDependencies getStandardDependencies();
+
+    StandardDependencies standardDependencies(Action<? super StandardDependencies> configureAction);
 
     /** The description to be included in the {@code pom.xml} file. */
     Property<String> getPomDescription();

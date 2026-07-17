@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.magictractor.gradle;
+package uk.co.magictractor.gradle.extension;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.internal.provider.PropertyFactory;
@@ -27,7 +28,7 @@ public class DefaultMagicTractorExtension implements MagicTractorExtension {
     private final ProjectInternal project;
 
     private final Property<Integer> javaVersion;
-    private final Property<Boolean> useStandardDependencies;
+    private final StandardDependencies standardDependencies;
     private final Property<String> pomDescription;
     private final Property<String> pomInceptionYear;
 
@@ -36,7 +37,7 @@ public class DefaultMagicTractorExtension implements MagicTractorExtension {
         this.project = (ProjectInternal) project;
 
         javaVersion = propertyFactory.property(Integer.class);
-        useStandardDependencies = propertyFactory.property(Boolean.class).convention(true);
+        standardDependencies = new DefaultStandardDependencies(propertyFactory);
         // TODO! convention() should read the description from the first para of README.md
         pomDescription = propertyFactory.property(String.class);
         pomInceptionYear = propertyFactory.property(String.class);
@@ -53,8 +54,14 @@ public class DefaultMagicTractorExtension implements MagicTractorExtension {
     }
 
     @Override
-    public Property<Boolean> getUseStandardDependencies() {
-        return useStandardDependencies;
+    public StandardDependencies getStandardDependencies() {
+        return standardDependencies;
+    }
+
+    @Override
+    public StandardDependencies standardDependencies(Action<? super StandardDependencies> configureAction) {
+        configureAction.execute(standardDependencies);
+        return standardDependencies;
     }
 
     @Override
